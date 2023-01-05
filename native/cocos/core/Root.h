@@ -301,6 +301,8 @@ public:
         return _cameraList;
     }
 
+    void attachCamera(scene::Camera *camera);
+    void detachCamera(scene::Camera *camera);
 private:
     void frameMoveBegin();
     void frameMoveProcess(bool isNeedUpdateScene, int32_t totalFrames);
@@ -336,6 +338,7 @@ private:
     // Cache ccstd::vector to avoid allocate every frame in frameMove
     ccstd::vector<scene::Camera *> _cameraList;
     ccstd::vector<gfx::Swapchain *> _swapchains;
+    ccstd::vector<scene::Camera *> _allCameras;
     //
 };
 } // namespace cc

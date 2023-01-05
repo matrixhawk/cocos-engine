@@ -351,6 +351,7 @@ public:
     void detachCamera();
 
     uint32_t getSystemWindowId() const { return _systemWindowId; }
+    void setSystemWindowId(uint32_t windowId);
 
     inline CameraType getCameraType() const { return _cameraType; }
     inline void setCameraType(CameraType type) { _cameraType = type; }
