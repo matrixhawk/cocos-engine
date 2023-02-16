@@ -443,7 +443,7 @@ void Camera::setSystemWindowId(uint32_t windowId) {
     _window = nullptr;
     const auto &renderWindows = Root::getInstance()->getWindows();
     for (const auto &window : renderWindows) {
-        if (windowId == window->getSwapchain()->getWindowId()) {
+        if (window->getSwapchain() && windowId == window->getSwapchain()->getWindowId()) {
             changeTargetWindow(window);
         }
     }
