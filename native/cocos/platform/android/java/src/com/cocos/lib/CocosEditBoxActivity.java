@@ -339,7 +339,7 @@ public class CocosEditBoxActivity extends Activity {
         mButtonParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         mButton.setTextColor(Color.WHITE);
         mButton.setBackground(getRoundRectShape());
-        mButtonLayout = new RelativeLayout(GlobalObject.getActivity());
+        mButtonLayout = new RelativeLayout(GlobalObject.getContext());
         mButtonLayout.setBackgroundColor(Color.WHITE);
         RelativeLayout.LayoutParams buttonLayoutParams = new RelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -425,24 +425,26 @@ public class CocosEditBoxActivity extends Activity {
 
     private static void showNative(String defaultValue, int maxLength, boolean isMultiline, boolean confirmHold, String confirmType, String inputType) {
 
-        GlobalObject.getActivity().runOnUiThread(new Runnable() {
+        GlobalObject.getHandler().post(new Runnable() {
             @Override
             public void run() {
-                Intent i = new Intent(GlobalObject.getActivity(), CocosEditBoxActivity.class);
-                i.putExtra("defaultValue", defaultValue);
-                i.putExtra("maxLength", maxLength);
-                i.putExtra("isMultiline", isMultiline);
-                i.putExtra("confirmHold", confirmHold);
-                i.putExtra("confirmType", confirmType);
-                i.putExtra("inputType", inputType);
-                GlobalObject.getActivity().startActivity(i);
+                if (GlobalObject.getActivity()!=null){
+                    Intent i = new Intent(GlobalObject.getActivity(), CocosEditBoxActivity.class);
+                    i.putExtra("defaultValue", defaultValue);
+                    i.putExtra("maxLength", maxLength);
+                    i.putExtra("isMultiline", isMultiline);
+                    i.putExtra("confirmHold", confirmHold);
+                    i.putExtra("confirmType", confirmType);
+                    i.putExtra("inputType", inputType);
+                    GlobalObject.getActivity().startActivity(i);
+                }
             }
         });
     }
 
     private static void hideNative() {
         if (null != CocosEditBoxActivity.sThis) {
-            GlobalObject.getActivity().runOnUiThread(new Runnable() {
+            GlobalObject.getHandler().post(new Runnable() {
                 @Override
                 public void run() {
                     CocosEditBoxActivity.sThis.hide();

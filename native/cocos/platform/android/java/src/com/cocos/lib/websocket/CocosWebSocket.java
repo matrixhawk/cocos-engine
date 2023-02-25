@@ -4,6 +4,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.cocos.lib.CocosHelper;
+import com.cocos.lib.GlobalObject;
 
 import org.cocos2dx.okhttp3.CipherSuite;
 import org.cocos2dx.okhttp3.Dispatcher;
@@ -180,7 +181,7 @@ public class CocosWebSocket extends WebSocketListener {
                 InputStream caInput = null;
 
                 if (caFilePath.startsWith("assets/")) {
-                    caInput = CocosHelper.getActivity().getResources().getAssets().open(caFilePath);
+                    caInput = GlobalObject.getContext().getResources().getAssets().open(caFilePath);
                 } else {
                     caInput = new FileInputStream(caFilePath);
                 }

@@ -185,6 +185,40 @@ JNIEXPORT void JNICALL Java_com_cocos_lib_CocosSurfaceView_onSurfaceDestroyedNat
     CC_CURRENT_ENGINE()->getScheduler()->performFunctionInCocosThread(func);
 }
 
+JNIEXPORT jlong Java_com_cocos_lib_CocosRemoteSurfaceView_constructNative(JNIEnv *env, jobject /*thiz*/, jint windowId) { // NOLINT JNI function name
+    return Java_com_cocos_lib_CocosSurfaceView_constructNative(env, nullptr, windowId);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_destructNative(JNIEnv * /*env*/, jobject /*thiz*/, jlong handle) { // NOLINT JNI function name
+    Java_com_cocos_lib_CocosSurfaceView_destructNative(nullptr, nullptr, handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_onSizeChangedNative(JNIEnv * /*env*/, jobject /*thiz*/, jint windowId, jint width, jint height) { // NOLINT JNI function name
+    Java_com_cocos_lib_CocosSurfaceView_onSizeChangedNative(nullptr, nullptr, windowId, width, height);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_onSurfaceRedrawNeededNative(JNIEnv * /*env*/, jobject /*thiz*/, jlong handle) { // NOLINT JNI function name
+    Java_com_cocos_lib_CocosSurfaceView_onSurfaceRedrawNeededNative(nullptr, nullptr, handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_onSurfaceCreatedNative(JNIEnv *env, jobject /*thiz*/, jlong handle, jobject surface) { // NOLINT JNI function name
+    Java_com_cocos_lib_CocosSurfaceView_onSurfaceCreatedNative(env, nullptr, handle, surface);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_onSurfaceChangedNative(JNIEnv *env, // NOLINT JNI function name
+                                                                                  jobject /*thiz*/,
+                                                                                  jlong handle,
+                                                                                  jobject surface,
+                                                                                  jint format,
+                                                                                  jint width,
+                                                                                  jint height) {
+    Java_com_cocos_lib_CocosSurfaceView_onSurfaceChangedNative(env, nullptr, handle, surface, format, width, height);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteSurfaceView_onSurfaceDestroyedNative(JNIEnv *env, jobject /*thiz*/, jlong handle) { // NOLINT JNI function name
+    Java_com_cocos_lib_CocosSurfaceView_onSurfaceDestroyedNative(env, nullptr, handle);
+}
+
 // NOLINTNEXTLINE
 JNIEXPORT void JNICALL
 Java_com_cocos_lib_CocosTouchHandler_handleActionDown(JNIEnv *env, // NOLINT JNI function name

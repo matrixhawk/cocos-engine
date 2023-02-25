@@ -76,7 +76,7 @@ public class CocosHelper {
     // Fields
     // ===========================================================
 
-    private static Activity sActivity;
+    private static Context sActivity;
     private static Vibrator sVibrateService;
     private static BatteryReceiver sBatteryReceiver = new BatteryReceiver();
 
@@ -187,10 +187,10 @@ public class CocosHelper {
 
     private static boolean sInited = false;
 
-    public static void init(final Activity activity) {
-        sActivity = activity;
+    public static void init(final Context context) {
+        sActivity = context;
         if (!sInited) {
-            CocosHelper.sVibrateService = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
+            CocosHelper.sVibrateService = (Vibrator) sActivity.getSystemService(Context.VIBRATOR_SERVICE);
             CocosHelper.initObbFilePath();
             CocosHelper.initializeOBBFile();
 
@@ -275,7 +275,7 @@ public class CocosHelper {
     }
 
     public static void copyTextToClipboard(final String text) {
-        sActivity.runOnUiThread(new Runnable() {
+        GlobalObject.getHandler().post(new Runnable() {
             @Override
             public void run() {
                 ClipboardManager myClipboard = (ClipboardManager) sActivity.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -354,10 +354,10 @@ public class CocosHelper {
         }
     }
 
-    public static Activity getActivity() {return sActivity;}
+    //public static Activity getActivity() {return sActivity;}
 
     public static float[] getSafeArea() {
-        if (android.os.Build.VERSION.SDK_INT >= 28) {
+        if (android.os.Build.VERSION.SDK_INT >= 28 && GlobalObject.getActivity()!=null) {
             do {
                 Object windowInsectObj = GlobalObject.getActivity().getWindow().getDecorView().getRootWindowInsets();
 
@@ -395,21 +395,25 @@ public class CocosHelper {
         return new float[]{0, 0, 0, 0};
     }
     public static void finishActivity() {
-        sActivity.runOnUiThread(new Runnable() {
+        GlobalObject.getHandler().post(new Runnable() {
             @Override
             public void run() {
-                sActivity.finish();
+                if (GlobalObject.getActivity()!=null){
+                    GlobalObject.getActivity().finish();
+                }
             }
         });
     }
     public static void setKeepScreenOn(boolean keepScreenOn) {
-        sActivity.runOnUiThread(new Runnable() {
+        GlobalObject.getHandler().post(new Runnable() {
             @Override
             public void run() {
-                if (keepScreenOn) {
-                    sActivity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                } else {
-                    sActivity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                if (GlobalObject.getActivity()!=null){
+                    if (keepScreenOn) {
+                        GlobalObject.getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    } else {
+                        GlobalObject.getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    }
                 }
             }
         });

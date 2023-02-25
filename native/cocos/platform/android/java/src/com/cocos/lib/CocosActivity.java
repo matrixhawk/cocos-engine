@@ -66,6 +66,7 @@ public class CocosActivity extends GameActivity {
         super.onCreate(savedInstanceState);
 
         GlobalObject.setActivity(this);
+        GlobalObject.setContext(this.getApplicationContext());
         CocosHelper.registerBatteryLevelReceiver(this);
         CocosHelper.init(this);
         CocosAudioFocusManager.registerAudioFocusListener(this);

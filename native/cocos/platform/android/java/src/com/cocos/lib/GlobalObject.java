@@ -24,10 +24,14 @@
 package com.cocos.lib;
 
 import android.app.Activity;
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 
 public class GlobalObject {
     private static Activity sActivity = null;
-
+    private static Context sContext = null;
+    private static Handler sHandler = new Handler(Looper.getMainLooper());
     public static void setActivity(Activity activity) {
         GlobalObject.sActivity = activity;
     }
@@ -35,4 +39,14 @@ public class GlobalObject {
     public static Activity getActivity() {
         return GlobalObject.sActivity;
     }
+
+    public static void setContext(Context context) {
+        GlobalObject.sContext = context;
+    }
+
+    public static Context getContext() {
+        return GlobalObject.sContext;
+    }
+
+    public static Handler getHandler(){ return  GlobalObject.sHandler; }
 }

@@ -104,7 +104,7 @@ import java.util.concurrent.CountDownLatch;
      class Cocos2dxWebViewClient extends WebViewClient {
          @Override
          public boolean shouldOverrideUrlLoading(WebView view, final String urlString) {
-             CocosActivity activity = (CocosActivity)GlobalObject.getActivity();
+             //CocosActivity activity = (CocosActivity)GlobalObject.getActivity();
 
              try {
                  URI uri = URI.create(urlString);
@@ -125,7 +125,7 @@ import java.util.concurrent.CountDownLatch;
              CountDownLatch latch = new CountDownLatch(1);
 
              // run worker on cocos thread
-             activity.runOnUiThread(new ShouldStartLoadingWorker(latch, result, mViewTag, urlString));
+             GlobalObject.getHandler().post(new ShouldStartLoadingWorker(latch, result, mViewTag, urlString));
 
              // wait for result from cocos thread
              try {
