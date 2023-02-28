@@ -467,6 +467,13 @@ scene::RenderWindow *Root::createWindow(scene::IRenderWindowInfo &info) {
 void Root::destroyWindow(scene::RenderWindow *window) {
     auto it = std::find(_renderWindows.begin(), _renderWindows.end(), window);
     if (it != _renderWindows.end()) {
+        auto swapchain = window->getSwapchain();
+        auto it2 = std::find(_swapchains.begin(), _swapchains.end(), swapchain);
+        if (it2 != _swapchains.end()){
+            _swapchains.erase(it2);
+            CC_SAFE_DELETE(swapchain);
+        }
+
         CC_SAFE_DESTROY(*it);
         _renderWindows.erase(it);
     }
@@ -629,8 +636,18 @@ void Root::doXRFrameMove(int32_t totalFrames) {
 
 void Root::addWindowEventListener() {
     _windowDestroyListener.bind([this](uint32_t windowId) -> void {
-        for (const auto &window : _renderWindows) {
-            window->onNativeWindowDestroy(windowId);
+//        for (const auto &window : _renderWindows) {
+//            window->onNativeWindowDestroy(windowId);
+//        }
+        for (auto it = _renderWindows.begin(); it != _renderWindows.end(); ++it) {
+            auto window = *it;
+            auto swapchain = window->getSwapchain();
+            if (swapchain!= nullptr&&swapchain->getWindowId()==windowId){
+                window->onNativeWindowDestroy(windowId);
+                window->clearCameras();
+                destroyWindow(window);
+                return;
+            }
         }
     });
 
