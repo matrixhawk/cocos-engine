@@ -168,7 +168,7 @@ void RenderWindow::attachCamera(Camera *camera) {
 void RenderWindow::detachCamera(Camera *camera) {
     for (auto it = _cameras.begin(); it != _cameras.end(); ++it) {
         if (*it == camera) {
-            (*it)->resetWindow();
+            (*it)->setWindow(nullptr);
             _cameras.erase(it);
             return;
         }
@@ -177,7 +177,7 @@ void RenderWindow::detachCamera(Camera *camera) {
 
 void RenderWindow::clearCameras() {
     for (auto it = _cameras.begin(); it != _cameras.end(); ++it) {
-        (*it)->resetWindow();
+        (*it)->setWindow(nullptr);
     }
     _cameras.clear();
 }

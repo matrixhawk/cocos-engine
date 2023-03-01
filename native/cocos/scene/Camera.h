@@ -367,7 +367,6 @@ public:
 
     void calculateObliqueMat(const Vec4 &viewSpacePlane);
 
-    void resetWindow(){ _window = nullptr; }
 protected:
     void setExposure(float ev100);
 
