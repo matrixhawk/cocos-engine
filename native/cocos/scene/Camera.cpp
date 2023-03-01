@@ -256,6 +256,8 @@ void Camera::changeTargetWindow(RenderWindow *window) {
         if (swapchain) {
             _systemWindowId = swapchain->getWindowId();
         }
+        
+        _node->setChangedFlags(1);
     }
 }
 
