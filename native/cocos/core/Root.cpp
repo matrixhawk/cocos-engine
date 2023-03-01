@@ -644,7 +644,6 @@ void Root::addWindowEventListener() {
             auto swapchain = window->getSwapchain();
             if (swapchain!= nullptr&&swapchain->getWindowId()==windowId){
                 window->onNativeWindowDestroy(windowId);
-                window->clearCameras();
                 destroyWindow(window);
                 return;
             }
