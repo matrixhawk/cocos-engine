@@ -75,6 +75,48 @@ extern int cocos_main(int argc, const char **argv); // NOLINT(readability-identi
 
 namespace cc {
 
+#define CC_SURFACE_LESS_SERVICE 1 //debug
+
+#if CC_SURFACE_LESS_SERVICE
+
+    AndroidPlatform::~AndroidPlatform() {
+
+    }
+
+    int AndroidPlatform::init() {
+        return 0;
+    }
+
+    int32_t AndroidPlatform::run(int argc, const char **argv) {
+        return 0;
+    }
+
+    int AndroidPlatform::getSdkVersion() const {
+        return 30;//TODO(cjh): Use java jni to get the sdk version
+    }
+
+    int32_t AndroidPlatform::loop() {
+        return 0;
+    }
+
+    void *AndroidPlatform::getActivity() {
+        return nullptr;
+    }
+
+    void AndroidPlatform::onDestroy() {
+
+    }
+
+    ISystemWindow *createNativeWindow(uint32_t windowId, void *externalHandle) {
+        return nullptr;
+    }
+
+}
+
+#else
+
+namespace cc {
+
 struct cc::TouchEvent touchEvent;
 struct cc::KeyboardEvent keyboardEvent;
 static uint32_t prevButtonsDown = 0;
@@ -631,13 +673,17 @@ int32_t AndroidPlatform::loop() {
     }
 }
 
+void *AndroidPlatform::getActivity() { // Dangerous
+    return _app->activity->javaGameActivity;
+}
+
+#endif
+
 void AndroidPlatform::pollEvent() {
     //
 }
 
-void *AndroidPlatform::getActivity() { // Dangerous
-    return _app->activity->javaGameActivity;
-}
+
 
 void *AndroidPlatform::getEnv() {
     return JniHelper::getEnv();

@@ -34,4 +34,5 @@ android {
 
 dependencies {
     api fileTree(include: ['*.jar'], dir: '../java/libs')
+    implementation project(':libcocosaidl')
 }
