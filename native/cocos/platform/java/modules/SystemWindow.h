@@ -50,6 +50,7 @@ public:
     uint32_t getWindowId() const override { return _windowId; }
 
     Size getViewSize() const override;
+    void setViewSize(uint32_t w, uint32_t h) override;
 
     void closeWindow() override;
 
@@ -58,6 +59,7 @@ private:
     std::promise<void> _windowHandlePromise;
     uint32_t _windowId{0};
     void *_windowHandle{nullptr};
+    Size _viewSize;
 };
 
 } // namespace cc

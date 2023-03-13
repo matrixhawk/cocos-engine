@@ -54,19 +54,30 @@ public:
 
     void onDestroy() override;
 
+#if CC_SURFACE_LESS_SERVICE
+    // Should be invoked in non-render thread.
+    void createGameThread(const std::function<void()> &gameLoop);
+    // Should be invoked in non-render thread.
+    void requestExitGameThreadAndWait();
+#else
     inline void setAndroidApp(android_app *app) {
         _app = app;
     }
+#endif
 
     ISystemWindow *createNativeWindow(uint32_t windowId, void *externalHandle) override;
 
 private:
+#if CC_SURFACE_LESS_SERVICE
+    std::thread *_gameThread{nullptr};
+    bool _isDestroyRequested{false};
+#else
     bool _isLowFrequencyLoopEnabled{false};
     utils::Timer _lowFrequencyTimer;
     int _loopTimeOut{-1};
     GameInputProxy *_inputProxy{nullptr};
     android_app *_app{nullptr};
-
     friend class GameInputProxy;
+#endif
 };
 } // namespace cc

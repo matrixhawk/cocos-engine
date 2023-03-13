@@ -57,7 +57,7 @@ void SystemWindow::copyTextToClipboard(const ccstd::string &text) {
 }
 
 void SystemWindow::setWindowHandle(void *handle) {
-#if (CC_PLATFORM == CC_PLATFORM_ANDROID)
+#if (CC_PLATFORM == CC_PLATFORM_ANDROID && !CC_SURFACE_LESS_SERVICE)
     // The getWindowHandle interface may have been called earlier, causing _handleMutex to be occupied all the time.
     bool lockSuccess = _handleMutex.try_lock();
     bool needNotify = _windowHandle == nullptr;
@@ -75,12 +75,14 @@ void SystemWindow::setWindowHandle(void *handle) {
 
 uintptr_t SystemWindow::getWindowHandle() const {
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
+#if !CC_SURFACE_LESS_SERVICE
     std::lock_guard lock(const_cast<std::mutex &>(_handleMutex));
     if (!_windowHandle) {
         auto &future = const_cast<std::promise<void> &>(_windowHandlePromise);
         future.get_future().get();
     }
     CC_ASSERT(_windowHandle);
+#endif
     return reinterpret_cast<uintptr_t>(_windowHandle);
 #else
     return reinterpret_cast<uintptr_t>(
@@ -90,15 +92,25 @@ uintptr_t SystemWindow::getWindowHandle() const {
 
 SystemWindow::Size SystemWindow::getViewSize() const {
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
+#if CC_SURFACE_LESS_SERVICE
+    return _viewSize;
+#else
     CC_ASSERT(_windowHandle);
     auto *nativeWindow = static_cast<ANativeWindow *>(_windowHandle);
     return Size{static_cast<float>(ANativeWindow_getWidth(nativeWindow)),
                 static_cast<float>(ANativeWindow_getHeight(nativeWindow))};
+#endif
 #else
     return Size{static_cast<float>(JNI_NATIVE_GLUE()->getWidth()),
                 static_cast<float>(JNI_NATIVE_GLUE()->getHeight())};
 #endif
 }
+
+void SystemWindow::setViewSize(uint32_t w, uint32_t h) {
+    _viewSize.width = static_cast<float>(w);
+    _viewSize.height = static_cast<float>(h);
+}
+
 void SystemWindow::closeWindow() {
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
     finishActivity();
@@ -118,12 +130,7 @@ bool SystemWindow::createWindow(const char *title, int x, int y, int w, int h, i
 }
 
 bool SystemWindow::createWindow(const char *title, int w, int h, int flags) {
-    CC_UNUSED_PARAM(title);
-    CC_UNUSED_PARAM(flags);
-#if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-    cc::JniHelper::callObjectVoidMethod(cc::JniHelper::getActivity(), JCLS_COCOSACTIVITY, "createSurface", 0, 0, w, h, static_cast<jint>(_windowId));
-#endif
-    return true;
+    return createWindow(title, 0, 0, w, h, flags);
 }
 
 } // namespace cc

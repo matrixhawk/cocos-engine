@@ -2,6 +2,7 @@ package com.cocos.lib;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.hardware.HardwareBuffer;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -12,17 +13,67 @@ import com.cocos.aidl.ICocosRemoteRenderCallback;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CocosRemoteRenderService extends Service {
 
     private static final String TAG = "RemoteRenderService";
-    //TODO(cjh): Should we consider thread race issues?
-    private Map<Integer, CocosRemoteRenderInstance> mRemoteRenderInstanceMap = new ConcurrentHashMap<>();
+    private static int mClientIdCounter = 0;
+    private Map<Integer, CocosRemoteRenderInstance> mRemoteRenderInstanceMap = new HashMap<>();
+    private long mPlatformHandle = 0L;
 
     public CocosRemoteRenderService() {
 
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        // GlobalObject.init should be initialized at first.
+        GlobalObject.init(this, null);
+
+        CocosHelper.registerBatteryLevelReceiver(this);
+        CocosHelper.init();
+        CocosAudioFocusManager.registerAudioFocusListener(this);
+        CanvasRenderingContext2DImpl.init(this);
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        int clientId = intent.getIntExtra("clientId", 1);
+        int width = intent.getIntExtra("width", 1);
+        int height = intent.getIntExtra("height", 1);
+        mPlatformHandle = nativeOnStartRender(clientId, width, height, getAssets());
+        return START_REDELIVER_INTENT;
+    }
+
+    @Override
+    public void onDestroy() {
+        if (mPlatformHandle != 0L) {
+            nativeOnStopRender(mPlatformHandle, -1); // TODO(cjh): Don't hardcode clientId
+            mPlatformHandle = 0L;
+        }
+
+        CocosHelper.unregisterBatteryLevelReceiver(this);
+        CocosAudioFocusManager.unregisterAudioFocusListener(this);
+        CanvasRenderingContext2DImpl.destroy();
+        GlobalObject.destroy();
+        super.onDestroy();
+    }
+
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
     }
 
     private class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
@@ -46,13 +97,38 @@ public class CocosRemoteRenderService extends Service {
         }
 
         @Override
-        public void notifyRenderFrameFinish(int eglSyncFd) throws RemoteException {
+        public void updateClientWindowSize(int clientId, int width, int height) throws RemoteException {
+            //TODO(cjh):
+//            nativeOnRenderSizeChanged();
+        }
+
+        @Override
+        public void notifyRenderFrameFinish(int clientId, int eglSyncFd) throws RemoteException {
             //TODO(cjh):
         }
     }
 
-    private void notifyHardwareBufferUpdatedToClient() {
+    private void updateHardwareBufferToClient() {
+        synchronized (mRemoteRenderInstanceMap) {
+            for (Integer clientId : mRemoteRenderInstanceMap.keySet()) {
+                CocosRemoteRenderInstance instance = mRemoteRenderInstanceMap.get(clientId);
+                if (instance == null || instance.getCallback() == null) {
+                    continue;
+                }
 
+                if (!instance.isBufferDirty()) {
+                    continue;
+                }
+
+                try {
+                    instance.getCallback().onUpdateHardwareBuffer(instance.getHardwareBuffer());
+                } catch(RemoteException e) {
+                    e.printStackTrace();
+                } finally {
+                    instance.setBufferDirty(false);
+                }
+            }
+        }
     }
 
 
@@ -66,7 +142,9 @@ public class CocosRemoteRenderService extends Service {
     public boolean onUnbind(Intent intent) {
         int clientId = intent.getIntExtra("clientId", -1);
         Log.w(TAG, "onUnbind: " + intent + ", clientId: " + clientId + ", map size: " + mRemoteRenderInstanceMap.size());
-        mRemoteRenderInstanceMap.remove(clientId);
+        synchronized (mRemoteRenderInstanceMap) {
+            mRemoteRenderInstanceMap.remove(clientId);
+        }
         return true;
     }
 
@@ -77,8 +155,11 @@ public class CocosRemoteRenderService extends Service {
         super.onRebind(intent);
     }
 
-    public void setHardwareBuffer(int clientId, HardwareBuffer buffer) {
-        CocosRemoteRenderInstance instance = mRemoteRenderInstanceMap.get(clientId);
+    public void setHardwareBufferJNI(int clientId, HardwareBuffer buffer) {
+        CocosRemoteRenderInstance instance = null;
+        synchronized (mRemoteRenderInstanceMap) {
+            instance = mRemoteRenderInstanceMap.get(clientId);
+        }
         if (instance == null) {
             Log.e(TAG, "setHardwareBuffer, could not find clientId: " + clientId);
             return;
@@ -92,6 +173,10 @@ public class CocosRemoteRenderService extends Service {
         instance.setHardwareBuffer(buffer);
         instance.setBufferDirty(true);
 
-        notifyHardwareBufferUpdatedToClient();
+        updateHardwareBufferToClient();
     }
+
+    private native long nativeOnStartRender(int clientId, int width, int height, AssetManager manager);
+    private native void nativeOnRenderSizeChanged(long handle, int clientId, int width, int height);
+    private native void nativeOnStopRender(long handle, int clientId);
 }

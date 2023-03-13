@@ -28,7 +28,10 @@
 #include "application/ApplicationManager.h"
 #include "base/Log.h"
 #include "base/memory/Memory.h"
+#if !CC_SURFACE_LESS_SERVICE
 #include "game-activity/native_app_glue/android_native_app_glue.h"
+#include "paddleboat.h"
+#endif
 #include "java/jni/JniHelper.h"
 #include "modules/Screen.h"
 #include "modules/System.h"
@@ -45,7 +48,6 @@
 
 #include "base/StringUtil.h"
 #include "engine/EngineEvents.h"
-#include "paddleboat.h"
 
 #define ABORT_GAME                          \
     {                                       \
@@ -75,19 +77,29 @@ extern int cocos_main(int argc, const char **argv); // NOLINT(readability-identi
 
 namespace cc {
 
-#define CC_SURFACE_LESS_SERVICE 1 // debug
-
 #if CC_SURFACE_LESS_SERVICE
 
 AndroidPlatform::~AndroidPlatform() {
+    requestExitGameThreadAndWait();
 }
 
 int AndroidPlatform::init() {
+
+    registerInterface(std::make_shared<Accelerometer>());
+    registerInterface(std::make_shared<Battery>());
+    registerInterface(std::make_shared<Network>());
+    registerInterface(std::make_shared<Screen>());
+    registerInterface(std::make_shared<System>());
+    registerInterface(std::make_shared<SystemWindowManager>());
+    registerInterface(std::make_shared<Vibrator>());
+
     return 0;
 }
 
-int32_t AndroidPlatform::run(int argc, const char **argv) {
-    return 0;
+void AndroidPlatform::onDestroy() {
+    UniversalPlatform::onDestroy();
+    unregisterAllInterfaces();
+    JniHelper::onDestroy();
 }
 
 int AndroidPlatform::getSdkVersion() const {
@@ -95,6 +107,12 @@ int AndroidPlatform::getSdkVersion() const {
 }
 
 int32_t AndroidPlatform::loop() {
+    while (true) {
+        if (_isDestroyRequested) {
+            break;
+        }
+        runTask();
+    }
     return 0;
 }
 
@@ -102,17 +120,22 @@ void *AndroidPlatform::getActivity() {
     return nullptr;
 }
 
-void AndroidPlatform::onDestroy() {
+void AndroidPlatform::createGameThread(const std::function<void()> &gameLoop) {
+    _gameThread = ccnew std::thread(gameLoop);
 }
 
-ISystemWindow *createNativeWindow(uint32_t windowId, void *externalHandle) {
-    return nullptr;
-}
+void AndroidPlatform::requestExitGameThreadAndWait() {
+    _isDestroyRequested = true;
+    if (_gameThread != nullptr) {
+        if (_gameThread->joinable()) {
+            _gameThread->join();
+        }
+        delete _gameThread;
+        _gameThread = nullptr;
+    }
 }
 
 #else
-
-namespace cc {
 
 struct cc::TouchEvent touchEvent;
 struct cc::KeyboardEvent keyboardEvent;
@@ -612,17 +635,8 @@ void AndroidPlatform::onDestroy() {
     CC_SAFE_DELETE(_inputProxy)
 }
 
-cc::ISystemWindow *AndroidPlatform::createNativeWindow(uint32_t windowId, void *externalHandle) {
-    return ccnew SystemWindow(windowId, externalHandle);
-}
-
 int AndroidPlatform::getSdkVersion() const {
     return AConfiguration_getSdkVersion(_app->config);
-}
-
-int32_t AndroidPlatform::run(int /*argc*/, const char ** /*argv*/) {
-    loop();
-    return 0;
 }
 
 int32_t AndroidPlatform::loop() {
@@ -675,6 +689,15 @@ void *AndroidPlatform::getActivity() { // Dangerous
 }
 
 #endif
+
+int32_t AndroidPlatform::run(int /*argc*/, const char ** /*argv*/) {
+    loop();
+    return 0;
+}
+
+cc::ISystemWindow *AndroidPlatform::createNativeWindow(uint32_t windowId, void *externalHandle) {
+    return ccnew SystemWindow(windowId, externalHandle);
+}
 
 void AndroidPlatform::pollEvent() {
     //

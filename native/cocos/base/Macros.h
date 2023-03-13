@@ -409,3 +409,7 @@ It should work same as apples CFSwapInt32LittleToHost(..)
         #define CC_FORCE_INLINE inline
     #endif
 #endif
+
+#ifndef CC_SURFACE_LESS_SERVICE
+#define CC_SURFACE_LESS_SERVICE 1
+#endif

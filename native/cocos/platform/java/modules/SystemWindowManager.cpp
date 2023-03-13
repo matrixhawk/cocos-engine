@@ -39,9 +39,11 @@ ISystemWindow *SystemWindowManager::createWindow(const ISystemWindowInfo &info) 
     if (!isExternalHandleExist(info.externalHandle)) {
         ISystemWindow *window = BasePlatform::getPlatform()->createNativeWindow(_nextWindowId, info.externalHandle);
         if (window) {
+#if !CC_SURFACE_LESS_SERVICE
             if (!info.externalHandle) {
                 window->createWindow(info.title.c_str(), info.x, info.y, info.width, info.height, info.flags);
             }
+#endif
             _windows[_nextWindowId] = std::shared_ptr<ISystemWindow>(window);
             _nextWindowId++;
         }

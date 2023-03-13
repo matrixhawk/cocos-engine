@@ -99,14 +99,20 @@ void GLES3Swapchain::doInit(const SwapchainInfo &info) {
     }
 
     #if CC_PLATFORM == CC_PLATFORM_ANDROID
-    ANativeWindow_setBuffersGeometry(window, width, height, nFmt);
+    if (window != nullptr) {
+        ANativeWindow_setBuffersGeometry(window, width, height, nFmt);
+    }
     #elif CC_PLATFORM == CC_PLATFORM_OHOS
     NativeLayerHandle(window, NativeLayerOps::SET_WIDTH_AND_HEIGHT, width, height);
     NativeLayerHandle(window, NativeLayerOps::SET_FORMAT, nFmt);
     #endif
 #endif
 
+#if CC_SURFACE_LESS_SERVICE
+    EGLSurfaceType surfaceType = EGLSurfaceType::PBUFFER;
+#else
     EGLSurfaceType surfaceType = _xr ? _xr->acquireEGLSurfaceType(getTypedID()) : EGLSurfaceType::WINDOW;
+#endif
     if (surfaceType == EGLSurfaceType::PBUFFER) {
         EGLint pbufferAttribs[]{
             EGL_WIDTH, 1,
@@ -186,6 +192,9 @@ void GLES3Swapchain::doDestroySurface() {
 
 void GLES3Swapchain::doCreateSurface(void *windowHandle) {
     auto *context = GLES3Device::getInstance()->context();
+#if CC_SURFACE_LESS_SERVICE
+    context->makeCurrent(_gpuSwapchain, _gpuSwapchain);
+#else
 #if CC_PLATFORM == CC_PLATFORM_LINUX
     auto window = reinterpret_cast<EGLNativeWindowType>(windowHandle);
 #else
@@ -236,6 +245,7 @@ void GLES3Swapchain::doCreateSurface(void *windowHandle) {
     }
 
     context->makeCurrent(_gpuSwapchain, _gpuSwapchain);
+#endif
 }
 
 } // namespace gfx
