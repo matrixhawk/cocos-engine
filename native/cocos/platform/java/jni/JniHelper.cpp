@@ -313,7 +313,7 @@ bool JniHelper::getStaticMethodInfo(JniMethodInfo &methodinfo,
     return true;
 }
 
-//NOLINTNEXTLINE
+// NOLINTNEXTLINE
 bool JniHelper::getMethodInfoDefaultClassLoader(JniMethodInfo &methodinfo,
                                                 const char *className,
                                                 const char *methodName,
@@ -443,4 +443,4 @@ void JniHelper::reportError(const ccstd::string &className, const ccstd::string 
     LOGE("Failed to find static java method. Class name: %s, method name: %s, signature: %s ", className.c_str(), methodName.c_str(), signature.c_str());
 }
 
-} //namespace cc
+} // namespace cc

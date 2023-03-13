@@ -29,8 +29,8 @@
 #include "base/Log.h"
 #include "base/memory/Memory.h"
 #if !CC_SURFACE_LESS_SERVICE
-#include "game-activity/native_app_glue/android_native_app_glue.h"
-#include "paddleboat.h"
+    #include "game-activity/native_app_glue/android_native_app_glue.h"
+    #include "paddleboat.h"
 #endif
 #include "java/jni/JniHelper.h"
 #include "modules/Screen.h"
@@ -84,7 +84,6 @@ AndroidPlatform::~AndroidPlatform() {
 }
 
 int AndroidPlatform::init() {
-
     registerInterface(std::make_shared<Accelerometer>());
     registerInterface(std::make_shared<Battery>());
     registerInterface(std::make_shared<Network>());

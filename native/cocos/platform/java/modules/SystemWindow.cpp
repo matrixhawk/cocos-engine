@@ -75,14 +75,14 @@ void SystemWindow::setWindowHandle(void *handle) {
 
 uintptr_t SystemWindow::getWindowHandle() const {
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-#if !CC_SURFACE_LESS_SERVICE
+    #if !CC_SURFACE_LESS_SERVICE
     std::lock_guard lock(const_cast<std::mutex &>(_handleMutex));
     if (!_windowHandle) {
         auto &future = const_cast<std::promise<void> &>(_windowHandlePromise);
         future.get_future().get();
     }
     CC_ASSERT(_windowHandle);
-#endif
+    #endif
     return reinterpret_cast<uintptr_t>(_windowHandle);
 #else
     return reinterpret_cast<uintptr_t>(
@@ -92,14 +92,14 @@ uintptr_t SystemWindow::getWindowHandle() const {
 
 SystemWindow::Size SystemWindow::getViewSize() const {
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-#if CC_SURFACE_LESS_SERVICE
+    #if CC_SURFACE_LESS_SERVICE
     return _viewSize;
-#else
+    #else
     CC_ASSERT(_windowHandle);
     auto *nativeWindow = static_cast<ANativeWindow *>(_windowHandle);
     return Size{static_cast<float>(ANativeWindow_getWidth(nativeWindow)),
                 static_cast<float>(ANativeWindow_getHeight(nativeWindow))};
-#endif
+    #endif
 #else
     return Size{static_cast<float>(JNI_NATIVE_GLUE()->getWidth()),
                 static_cast<float>(JNI_NATIVE_GLUE()->getHeight())};

@@ -26,12 +26,12 @@
 #include "base/Macros.h"
 
 #if CC_SURFACE_LESS_SERVICE
-#include <android/asset_manager_jni.h>
-#include "platform/interfaces/modules/ISystemWindowManager.h"
-#include "platform/interfaces/modules/ISystemWindow.h"
-#include "platform/java/modules/SystemWindowManager.h"
+    #include <android/asset_manager_jni.h>
+    #include "platform/interfaces/modules/ISystemWindow.h"
+    #include "platform/interfaces/modules/ISystemWindowManager.h"
+    #include "platform/java/modules/SystemWindowManager.h"
 #else
-#include "game-activity/native_app_glue/android_native_app_glue.h"
+    #include "game-activity/native_app_glue/android_native_app_glue.h"
 #endif
 
 #include "platform/android/AndroidPlatform.h"
@@ -55,7 +55,7 @@ static void android_surface_less_main(int32_t width, int32_t height) {
     info.width = width;
     info.height = height;
     info.externalHandle = nullptr;
-    auto* window = androidPlatform->getInterface<cc::SystemWindowManager>()->createWindow(info);
+    auto *window = androidPlatform->getInterface<cc::SystemWindowManager>()->createWindow(info);
     window->setViewSize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
     CC_LOG_INFO("android_surface_less_main, 03");
@@ -78,7 +78,7 @@ void android_main(struct android_app *app) {
 }
 #endif
 
-//NOLINTNEXTLINE
+// NOLINTNEXTLINE
 JNIEXPORT void JNICALL Java_com_cocos_lib_CocosActivity_onCreateNative(JNIEnv *env, jobject activity) {
     cc::JniHelper::init(env, activity);
 }
@@ -92,7 +92,7 @@ JNIEXPORT jlong JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnStar
 
     auto *platform = cc::BasePlatform::getPlatform();
     auto *androidPlatform = static_cast<cc::AndroidPlatform *>(platform);
-    androidPlatform->createGameThread([width, height](){
+    androidPlatform->createGameThread([width, height]() {
         android_surface_less_main(width, height);
     });
     return reinterpret_cast<jlong>(platform);

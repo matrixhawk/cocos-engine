@@ -84,7 +84,7 @@ void GLES3Swapchain::doInit(const SwapchainInfo &info) {
         if (!fps)
             SwappyGL_setSwapIntervalNS(SWAPPY_SWAP_60FPS);
         else
-            SwappyGL_setSwapIntervalNS(1000000000L / fps); //ns
+            SwappyGL_setSwapIntervalNS(1000000000L / fps); // ns
         enableSwappy &= SwappyGL_setWindow(window);
         _gpuSwapchain->swappyEnabled = enableSwappy;
     } else {
@@ -195,11 +195,11 @@ void GLES3Swapchain::doCreateSurface(void *windowHandle) {
 #if CC_SURFACE_LESS_SERVICE
     context->makeCurrent(_gpuSwapchain, _gpuSwapchain);
 #else
-#if CC_PLATFORM == CC_PLATFORM_LINUX
+    #if CC_PLATFORM == CC_PLATFORM_LINUX
     auto window = reinterpret_cast<EGLNativeWindowType>(windowHandle);
-#else
+    #else
     auto *window = reinterpret_cast<EGLNativeWindowType>(windowHandle);
-#endif
+    #endif
 
     EGLint nFmt = 0;
     if (eglGetConfigAttrib(context->eglDisplay, context->eglConfig, EGL_NATIVE_VISUAL_ID, &nFmt) == EGL_FALSE) {
@@ -212,18 +212,18 @@ void GLES3Swapchain::doCreateSurface(void *windowHandle) {
     CC_UNUSED_PARAM(width);
     CC_UNUSED_PARAM(height);
 
-#if CC_SWAPPY_ENABLED
+    #if CC_SWAPPY_ENABLED
     if (_gpuSwapchain->swappyEnabled) {
         _gpuSwapchain->swappyEnabled &= SwappyGL_setWindow(window);
     }
-#endif
+    #endif
 
-#if CC_PLATFORM == CC_PLATFORM_ANDROID
+    #if CC_PLATFORM == CC_PLATFORM_ANDROID
     ANativeWindow_setBuffersGeometry(window, width, height, nFmt);
-#elif CC_PLATFORM == CC_PLATFORM_OHOS
+    #elif CC_PLATFORM == CC_PLATFORM_OHOS
     NativeLayerHandle(window, NativeLayerOps::SET_WIDTH_AND_HEIGHT, width, height);
     NativeLayerHandle(window, SET_FORMAT, nFmt);
-#endif
+    #endif
 
     if (_gpuSwapchain->eglSurface == EGL_NO_SURFACE) {
         IXRInterface *xr = CC_GET_XR_INTERFACE();
