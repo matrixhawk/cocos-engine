@@ -75,42 +75,39 @@ extern int cocos_main(int argc, const char **argv); // NOLINT(readability-identi
 
 namespace cc {
 
-#define CC_SURFACE_LESS_SERVICE 1 //debug
+#define CC_SURFACE_LESS_SERVICE 1 // debug
 
 #if CC_SURFACE_LESS_SERVICE
 
-    AndroidPlatform::~AndroidPlatform() {
+AndroidPlatform::~AndroidPlatform() {
+}
 
-    }
+int AndroidPlatform::init() {
+    return 0;
+}
 
-    int AndroidPlatform::init() {
-        return 0;
-    }
+int32_t AndroidPlatform::run(int argc, const char **argv) {
+    return 0;
+}
 
-    int32_t AndroidPlatform::run(int argc, const char **argv) {
-        return 0;
-    }
+int AndroidPlatform::getSdkVersion() const {
+    return 30; // TODO(cjh): Use java jni to get the sdk version
+}
 
-    int AndroidPlatform::getSdkVersion() const {
-        return 30;//TODO(cjh): Use java jni to get the sdk version
-    }
+int32_t AndroidPlatform::loop() {
+    return 0;
+}
 
-    int32_t AndroidPlatform::loop() {
-        return 0;
-    }
+void *AndroidPlatform::getActivity() {
+    return nullptr;
+}
 
-    void *AndroidPlatform::getActivity() {
-        return nullptr;
-    }
+void AndroidPlatform::onDestroy() {
+}
 
-    void AndroidPlatform::onDestroy() {
-
-    }
-
-    ISystemWindow *createNativeWindow(uint32_t windowId, void *externalHandle) {
-        return nullptr;
-    }
-
+ISystemWindow *createNativeWindow(uint32_t windowId, void *externalHandle) {
+    return nullptr;
+}
 }
 
 #else
@@ -562,9 +559,9 @@ void gameControllerStatusCallback(const int32_t controllerIndex,
 AndroidPlatform::~AndroidPlatform() = default;
 
 int AndroidPlatform::init() {
-#if CC_USE_XR
+    #if CC_USE_XR
     registerInterface(std::make_shared<XRInterface>());
-#endif
+    #endif
     IXRInterface *xr = CC_GET_XR_INTERFACE();
     if (xr) {
         JniHelper::getEnv();
@@ -660,7 +657,7 @@ int32_t AndroidPlatform::loop() {
         }
         flushTasksOnGameThreadJNI();
 
-#if CC_ENABLE_SUSPEND_GAME_THREAD
+    #if CC_ENABLE_SUSPEND_GAME_THREAD
         if (_isLowFrequencyLoopEnabled) {
             // Suspend a game thread after it has been running in the background for a specified amount of time
             if (_lowFrequencyTimer.getSeconds() > LOW_FREQUENCY_EXPIRED_DURATION_SECONDS) {
@@ -668,7 +665,7 @@ int32_t AndroidPlatform::loop() {
                 _loopTimeOut = -1;
             }
         }
-#endif
+    #endif
         if (xr) xr->platformLoopEnd();
     }
 }
@@ -682,8 +679,6 @@ void *AndroidPlatform::getActivity() { // Dangerous
 void AndroidPlatform::pollEvent() {
     //
 }
-
-
 
 void *AndroidPlatform::getEnv() {
     return JniHelper::getEnv();
