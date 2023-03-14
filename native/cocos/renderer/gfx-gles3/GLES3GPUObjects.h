@@ -145,6 +145,11 @@ struct GLES3GPUTexture {
     GLenum glMinFilter{0};
     GLenum glMagFilter{0};
     GLES3GPUSwapchain *swapchain{nullptr};
+#if CC_SURFACE_LESS_SERVICE
+    AHardwareBuffer *hardwareBuffer{nullptr};
+    EGLImage eglImage{EGL_NO_IMAGE};
+    bool fromHardwareBuffer{false};
+#endif
 };
 
 struct GLES3GPUTextureView {
@@ -161,6 +166,7 @@ struct GLES3GPUSwapchain {
 #if CC_SWAPPY_ENABLED
     bool swappyEnabled{false};
 #endif
+
     EGLSurface eglSurface{EGL_NO_SURFACE};
     EGLint eglSwapInterval{0};
     GLuint glFramebuffer{0};
@@ -348,7 +354,12 @@ public:
         uint32_t height{UINT_MAX};
     };
     struct GLFramebuffer {
-        inline void initialize(GLES3GPUSwapchain *sc) { swapchain = sc; }
+        inline void initialize(GLES3GPUSwapchain *sc) {
+            swapchain = sc;
+#if CC_SURFACE_LESS_SERVICE
+            _glFramebuffer = swapchain->glFramebuffer;
+#endif
+        }
         inline void initialize(const GLFramebufferInfo &info) {
             _glFramebuffer = info.glFramebuffer;
             _width = info.width;

@@ -36,7 +36,11 @@
 #endif
 
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-    #include "android/native_window.h"
+    #include "platform/java/jni/JniHelper.h"
+    #include <android/native_window.h>
+#if CC_SURFACE_LESS_SERVICE
+#include <android/hardware_buffer_jni.h>
+#endif
 #elif CC_PLATFORM == CC_PLATFORM_OHOS
     #include <native_layer.h>
     #include <native_layer_jni.h>
@@ -155,6 +159,12 @@ void GLES3Swapchain::doInit(const SwapchainInfo &info) {
     initTexture(textureInfo, _depthStencilTexture);
 
     _gpuSwapchain->gpuColorTexture = static_cast<GLES3Texture *>(_colorTexture.get())->gpuTexture();
+
+#if CC_SURFACE_LESS_SERVICE
+    jobject buffer = AHardwareBuffer_toHardwareBuffer(JniHelper::getEnv(), _gpuSwapchain->gpuColorTexture->hardwareBuffer);
+    // TODO(cjh): Fix hardcode clientId 1
+    JniHelper::callStaticVoidMethod("com/cocos/lib/CocosRemoteRenderService", "setHardwareBufferJNI", static_cast<int>(0), buffer);
+#endif
 }
 
 void GLES3Swapchain::doDestroy() {

@@ -57,4 +57,8 @@ public class GlobalObject {
     public static void runOnUiThread(Runnable runnable) {
         sHandler.post(runnable);
     }
+
+    public static boolean postDelay(Runnable runnable, long milliseconds) {
+        return sHandler.postDelayed(runnable, milliseconds);
+    }
 }

@@ -16,13 +16,15 @@ import java.util.Map;
 
 public class CocosRemoteRenderService extends Service {
 
-    private static final String TAG = "RemoteRenderService";
+    private static final String TAG = "CocosRemoteRenderService";
     private static int mClientIdCounter = 0;
+    private static CocosRemoteRenderService sInstance;
     private Map<Integer, CocosRemoteRenderInstance> mRemoteRenderInstanceMap = new HashMap<>();
     private long mPlatformHandle = 0L;
+    private HardwareBuffer mDefaultHardwareBuffer;
 
     public CocosRemoteRenderService() {
-
+        sInstance = this;
     }
 
     @Override
@@ -40,7 +42,7 @@ public class CocosRemoteRenderService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        int clientId = intent.getIntExtra("clientId", 1);
+        int clientId = intent.getIntExtra("clientId", 0);
         int width = intent.getIntExtra("width", 1);
         int height = intent.getIntExtra("height", 1);
         mPlatformHandle = nativeOnStartRender(clientId, width, height, getAssets());
@@ -94,6 +96,22 @@ public class CocosRemoteRenderService extends Service {
         public void initialize(int clientId, ICocosRemoteRenderCallback cb) throws RemoteException {
             mRemoteRenderInstanceMap.put(clientId, this);
             mCallback = cb;
+
+            if (clientId == 0 && mDefaultHardwareBuffer != null) {
+                GlobalObject.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateHardwareBufferToClient();
+                    }
+                });
+            } else {
+                GlobalObject.postDelay(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateHardwareBufferToClient();
+                    }
+                }, 200L);
+            }
         }
 
         @Override
@@ -155,8 +173,11 @@ public class CocosRemoteRenderService extends Service {
         super.onRebind(intent);
     }
 
-    public void setHardwareBufferJNI(int clientId, HardwareBuffer buffer) {
-        CocosRemoteRenderInstance instance = null;
+    private void setHardwareBuffer(int clientId, HardwareBuffer buffer) {
+        if (clientId == 0) {
+            mDefaultHardwareBuffer = buffer;
+        }
+        CocosRemoteRenderInstance instance;
         synchronized (mRemoteRenderInstanceMap) {
             instance = mRemoteRenderInstanceMap.get(clientId);
         }
@@ -174,6 +195,10 @@ public class CocosRemoteRenderService extends Service {
         instance.setBufferDirty(true);
 
         updateHardwareBufferToClient();
+    }
+
+    public static void setHardwareBufferJNI(int clientId, Object buffer) {
+        sInstance.setHardwareBuffer(clientId, (HardwareBuffer) buffer);
     }
 
     private native long nativeOnStartRender(int clientId, int width, int height, AssetManager manager);

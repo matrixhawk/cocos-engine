@@ -526,6 +526,10 @@ private:
         return "Ljava/lang/String;";
     }
 
+    static ccstd::string getJNISignature(jobject /*unused*/) {
+        return "Ljava/lang/Object;";
+    }
+
     template <typename T>
     static ccstd::string getJNISignature(T x) {
         // This template should never be instantiated

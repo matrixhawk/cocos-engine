@@ -310,6 +310,12 @@ void GLES3GPUContext::makeCurrent(const GLES3GPUSwapchain *drawSwapchain, const 
 }
 
 void GLES3GPUContext::present(const GLES3GPUSwapchain *swapchain) {
+
+#if CC_SURFACE_LESS_SERVICE
+    glFlush();
+    glFinish();
+#else
+
 #if CC_SWAPPY_ENABLED
     if (swapchain->swappyEnabled) {
         // fallback to normal eglswap if swappy swap failed.
@@ -333,6 +339,7 @@ void GLES3GPUContext::present(const GLES3GPUSwapchain *swapchain) {
     }
     makeCurrent(swapchain, swapchain);
     EGL_CHECK(eglSwapBuffers(eglDisplay, swapchain->eglSurface));
+#endif
 }
 
 EGLContext GLES3GPUContext::getSharedContext() {

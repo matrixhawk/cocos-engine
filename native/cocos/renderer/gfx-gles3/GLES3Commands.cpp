@@ -31,6 +31,8 @@
 #include "gfx-gles-common/GLESCommandPool.h"
 #include "gfx-gles3/GLES3GPUObjects.h"
 
+#include <android/hardware_buffer.h>
+
 #define BUFFER_OFFSET(idx) (static_cast<char *>(0) + (idx))
 
 constexpr uint32_t USE_VAO = true;
@@ -798,6 +800,49 @@ void cmdFuncGLES3ResizeBuffer(GLES3Device *device, GLES3GPUBuffer *gpuBuffer) {
     }
 }
 
+void createEGLImageWithHardwareBuffer(GLES3Device *device, GLES3GPUTexture *gpuTexture) {
+    AHardwareBuffer_Desc desc = {
+            gpuTexture->width,
+            gpuTexture->height,
+            1,
+            AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM, // TODO(cjh): Don't hardcode format.
+            AHARDWAREBUFFER_USAGE_CPU_READ_NEVER | AHARDWAREBUFFER_USAGE_CPU_WRITE_NEVER |
+            AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT,
+            0,
+            0,
+            0};
+
+    int errCode = AHardwareBuffer_allocate(&desc, &gpuTexture->hardwareBuffer);
+    CC_ASSERT_EQ(errCode, 0);
+
+    EGLClientBuffer clientBuffer = eglGetNativeClientBufferANDROID(gpuTexture->hardwareBuffer);
+    CC_ASSERT_NOT_NULL(clientBuffer);
+    EGL_CHECK();
+    GL_CHECK();
+
+    auto display = device->context()->eglDisplay;
+
+    EGLint eglImageAttributes[] = {EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE};
+    gpuTexture->eglImage = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
+                                  clientBuffer, eglImageAttributes);
+
+    EGL_CHECK();
+
+    CC_ASSERT_NE(gpuTexture->eglImage, EGL_NO_IMAGE);
+}
+
+void destroyEGLImageAndHardwareBuffer(GLES3Device *device, GLES3GPUTexture *gpuTexture) {
+    if (gpuTexture->eglImage != EGL_NO_IMAGE) {
+        EGL_CHECK(eglDestroyImageKHR(device->context()->eglDisplay, gpuTexture->eglImage));
+        gpuTexture->eglImage = EGL_NO_IMAGE;
+    }
+
+    if (gpuTexture->hardwareBuffer != nullptr) {
+        AHardwareBuffer_release(gpuTexture->hardwareBuffer);
+        gpuTexture->hardwareBuffer = nullptr;
+    }
+}
+
 void cmdFuncGLES3CreateTexture(GLES3Device *device, GLES3GPUTexture *gpuTexture) {
     static ccstd::vector<GLint> supportedSampleCounts;
 
@@ -843,10 +888,17 @@ void cmdFuncGLES3CreateTexture(GLES3Device *device, GLES3GPUTexture *gpuTexture)
                         GL_CHECK(glBindRenderbuffer(GL_RENDERBUFFER, gpuTexture->glRenderbuffer));
                         glRenderbuffer = gpuTexture->glRenderbuffer;
                     }
-                    if (gpuTexture->glSamples > 1) {
-                        GL_CHECK(glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, gpuTexture->glSamples, gpuTexture->glInternalFmt, gpuTexture->width, gpuTexture->height));
+
+                    if (gpuTexture->fromHardwareBuffer) {
+                        // TODO(cjh):
+                        createEGLImageWithHardwareBuffer(device, gpuTexture);
+                        GL_CHECK(glEGLImageTargetRenderbufferStorageOES(GL_RENDERBUFFER, gpuTexture->eglImage));
                     } else {
-                        GL_CHECK(glRenderbufferStorage(GL_RENDERBUFFER, gpuTexture->glInternalFmt, gpuTexture->width, gpuTexture->height));
+                        if (gpuTexture->glSamples > 1) {
+                            GL_CHECK(glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, gpuTexture->glSamples, gpuTexture->glInternalFmt, gpuTexture->width, gpuTexture->height));
+                        } else {
+                            GL_CHECK(glRenderbufferStorage(GL_RENDERBUFFER, gpuTexture->glInternalFmt, gpuTexture->width, gpuTexture->height));
+                        }
                     }
                 }
                 break;
@@ -945,6 +997,12 @@ void cmdFuncGLES3DestroyTexture(GLES3Device *device, GLES3GPUTexture *gpuTexture
             GL_CHECK(glBindRenderbuffer(GL_RENDERBUFFER, 0));
             glRenderbuffer = 0;
         }
+
+        if (gpuTexture->fromHardwareBuffer) {
+            destroyEGLImageAndHardwareBuffer(device, gpuTexture);
+            gpuTexture->fromHardwareBuffer = false;
+        }
+
         GL_CHECK(glDeleteRenderbuffers(1, &gpuTexture->glRenderbuffer));
         gpuTexture->glRenderbuffer = 0;
     }
@@ -1639,7 +1697,14 @@ static void doCreateFramebufferInstance(GLES3Device *device, GLES3GPUFramebuffer
                                         uint32_t depthStencil, GLES3GPUFramebuffer::Framebuffer *outFBO,
                                         const uint32_t *resolves = nullptr, uint32_t depthStencilResolve = INVALID_BINDING) {
     GLES3GPUSwapchain *swapchain{getSwapchainIfExists(gpuFBO->gpuColorViews, colors.data(), colors.size())};
-    if (!swapchain) {
+    bool needToCreateFbo = swapchain == nullptr;
+#if CC_SURFACE_LESS_SERVICE
+    if (swapchain != nullptr && swapchain->glFramebuffer == 0) {
+        // Set swapchain to nullptr since the default FBO needs to be created for surfaceless mode.
+        needToCreateFbo = true;
+    }
+#endif
+    if (needToCreateFbo) {
         const GLES3GPUTextureView *depthStencilTextureView = nullptr;
         if (depthStencil != INVALID_BINDING) {
             depthStencilTextureView = depthStencil < gpuFBO->gpuColorViews.size()
@@ -1664,6 +1729,12 @@ static void doCreateFramebufferInstance(GLES3Device *device, GLES3GPUFramebuffer
                 outFBO->resolveFramebuffer.initialize(resolveSwapchain);
             }
         }
+
+#if CC_SURFACE_LESS_SERVICE
+        if (swapchain != nullptr) {
+            swapchain->glFramebuffer = outFBO->framebuffer.getFramebuffer();
+        }
+#endif
     } else {
         outFBO->framebuffer.initialize(swapchain);
     }
