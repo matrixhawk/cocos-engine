@@ -310,20 +310,19 @@ void GLES3GPUContext::makeCurrent(const GLES3GPUSwapchain *drawSwapchain, const 
 }
 
 void GLES3GPUContext::present(const GLES3GPUSwapchain *swapchain) {
-
 #if CC_SURFACE_LESS_SERVICE
     glFlush();
     glFinish();
 #else
 
-#if CC_SWAPPY_ENABLED
+    #if CC_SWAPPY_ENABLED
     if (swapchain->swappyEnabled) {
         // fallback to normal eglswap if swappy swap failed.
         if (SwappyGL_swap(eglDisplay, swapchain->eglSurface)) {
             return;
         }
     }
-#endif
+    #endif
     // For an example, 2 windows changed to background will cause the eglSurface of both destroyed,
     // and then make one of them foreground, and the other window's eglSurface will stays EGL_NO_SURFACE.
     // But in GLES3Device::present it iterates all swapchains, and now the second window containing the invalid surface exists.

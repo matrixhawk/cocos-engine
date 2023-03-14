@@ -802,15 +802,15 @@ void cmdFuncGLES3ResizeBuffer(GLES3Device *device, GLES3GPUBuffer *gpuBuffer) {
 
 void createEGLImageWithHardwareBuffer(GLES3Device *device, GLES3GPUTexture *gpuTexture) {
     AHardwareBuffer_Desc desc = {
-            gpuTexture->width,
-            gpuTexture->height,
-            1,
-            AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM, // TODO(cjh): Don't hardcode format.
-            AHARDWAREBUFFER_USAGE_CPU_READ_NEVER | AHARDWAREBUFFER_USAGE_CPU_WRITE_NEVER |
+        gpuTexture->width,
+        gpuTexture->height,
+        1,
+        AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM, // TODO(cjh): Don't hardcode format.
+        AHARDWAREBUFFER_USAGE_CPU_READ_NEVER | AHARDWAREBUFFER_USAGE_CPU_WRITE_NEVER |
             AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT,
-            0,
-            0,
-            0};
+        0,
+        0,
+        0};
 
     int errCode = AHardwareBuffer_allocate(&desc, &gpuTexture->hardwareBuffer);
     CC_ASSERT_EQ(errCode, 0);
@@ -824,7 +824,7 @@ void createEGLImageWithHardwareBuffer(GLES3Device *device, GLES3GPUTexture *gpuT
 
     EGLint eglImageAttributes[] = {EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE};
     gpuTexture->eglImage = eglCreateImageKHR(display, EGL_NO_CONTEXT, EGL_NATIVE_BUFFER_ANDROID,
-                                  clientBuffer, eglImageAttributes);
+                                             clientBuffer, eglImageAttributes);
 
     EGL_CHECK();
 

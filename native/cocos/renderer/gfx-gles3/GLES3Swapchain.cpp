@@ -36,11 +36,11 @@
 #endif
 
 #if (CC_PLATFORM == CC_PLATFORM_ANDROID)
-    #include "platform/java/jni/JniHelper.h"
     #include <android/native_window.h>
-#if CC_SURFACE_LESS_SERVICE
-#include <android/hardware_buffer_jni.h>
-#endif
+    #include "platform/java/jni/JniHelper.h"
+    #if CC_SURFACE_LESS_SERVICE
+        #include <android/hardware_buffer_jni.h>
+    #endif
 #elif CC_PLATFORM == CC_PLATFORM_OHOS
     #include <native_layer.h>
     #include <native_layer_jni.h>
