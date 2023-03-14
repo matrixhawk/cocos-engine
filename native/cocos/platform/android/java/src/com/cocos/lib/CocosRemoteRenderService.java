@@ -7,6 +7,7 @@ import android.hardware.HardwareBuffer;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.MotionEvent;
 
 import com.cocos.aidl.ICocosRemoteRender;
 import com.cocos.aidl.ICocosRemoteRenderCallback;
@@ -79,10 +80,11 @@ public class CocosRemoteRenderService extends Service {
     }
 
     private class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
-
+        private int mClientId = 0;
         private ICocosRemoteRenderCallback mCallback;
         private HardwareBuffer mBuffer;
         private boolean mIsBufferDirty = false;
+        private CocosTouchHandler mTouchHandler;
 
         public HardwareBuffer getHardwareBuffer() { return mBuffer; }
         public void setHardwareBuffer(HardwareBuffer buffer) { mBuffer = buffer; }
@@ -92,10 +94,14 @@ public class CocosRemoteRenderService extends Service {
 
         public ICocosRemoteRenderCallback getCallback() { return mCallback; }
 
+        CocosRemoteRenderInstance() {
+        }
         @Override
         public void initialize(int clientId, ICocosRemoteRenderCallback cb) throws RemoteException {
+            mClientId = clientId;
             mRemoteRenderInstanceMap.put(clientId, this);
             mCallback = cb;
+            mTouchHandler = new CocosTouchHandler(1); // mainWindowId = 1
 
             if (clientId == 0 && mDefaultHardwareBuffer != null) {
                 GlobalObject.runOnUiThread(new Runnable() {
@@ -115,13 +121,17 @@ public class CocosRemoteRenderService extends Service {
         }
 
         @Override
-        public void updateClientWindowSize(int clientId, int width, int height) throws RemoteException {
+        public boolean onTouchEvent(MotionEvent event) throws RemoteException {
+            return mTouchHandler.onTouchEvent(event);
+        }
+        @Override
+        public void updateClientWindowSize(int width, int height) throws RemoteException {
             //TODO(cjh):
 //            nativeOnRenderSizeChanged();
         }
 
         @Override
-        public void notifyRenderFrameFinish(int clientId, int eglSyncFd) throws RemoteException {
+        public void notifyRenderFrameFinish(int eglSyncFd) throws RemoteException {
             //TODO(cjh):
         }
     }

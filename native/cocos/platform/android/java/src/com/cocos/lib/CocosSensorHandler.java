@@ -127,11 +127,17 @@ public class CocosSensorHandler implements SensorEventListener {
     }
 
     public static void setAccelerometerInterval(float interval) {
-        mSensorHandler.setInterval(interval);
+        if (mSensorHandler != null) {
+            mSensorHandler.setInterval(interval);
+        }
     }
 
     public static void setAccelerometerEnabled(boolean enabled) {
         mEnableSensor = enabled;
+        if (mSensorHandler == null) {
+            return;
+        }
+
         if (enabled) {
             mSensorHandler.enable();
         } else {

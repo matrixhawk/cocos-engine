@@ -111,6 +111,8 @@ int32_t AndroidPlatform::loop() {
             break;
         }
         runTask();
+        flushTasksOnGameThreadAtForegroundJNI();
+        flushTasksOnGameThreadJNI();
     }
     return 0;
 }
