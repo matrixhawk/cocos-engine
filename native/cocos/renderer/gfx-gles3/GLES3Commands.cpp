@@ -32,7 +32,7 @@
 #include "gfx-gles3/GLES3GPUObjects.h"
 
 #if CC_SURFACE_LESS_SERVICE
-#include <android/hardware_buffer.h>
+    #include <android/hardware_buffer.h>
 #endif
 
 #define BUFFER_OFFSET(idx) (static_cast<char *>(0) + (idx))
