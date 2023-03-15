@@ -26,4 +26,5 @@ package com.cocos.aidl;
 interface ICocosRemoteRenderCallback {
     void onUpdateHardwareBuffer(in HardwareBuffer buffer);
     void onRenderFrameFinish();
+    void onScript(in String arg0, in String arg1);
 }

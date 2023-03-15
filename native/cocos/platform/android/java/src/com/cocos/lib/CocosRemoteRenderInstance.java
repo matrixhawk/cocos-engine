@@ -17,6 +17,7 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
     private ICocosRemoteRenderCallback mCallback;
     private HardwareBuffer mBuffer;
     private boolean mIsBufferDirty = true;
+    private boolean mIsActive = false;
     private CocosTouchHandler mTouchHandler;
 
     CocosRemoteRenderInstance(long platformHandle, int clientId, int width, int height) {
@@ -28,6 +29,13 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
         mTouchHandler = new CocosTouchHandler(1); // mainWindowId = 1
     }
 
+    public void setActive(boolean v) {
+        mIsActive = v;
+    }
+
+    public boolean isActive() {
+        return mIsActive;
+    }
     public HardwareBuffer getHardwareBuffer() {
         return mBuffer;
     }
@@ -57,7 +65,7 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
         }
 
         if (!mIsBufferDirty) {
-            Log.w(TAG, "instance buffer is not dirty!");
+            Log.w(TAG, ">>> clientId: " + mClientId + ", instance buffer is not dirty!");
             return;
         }
 
@@ -73,7 +81,10 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
     @Override
     public void start() throws RemoteException {
         Log.i(TAG, "CocosRemoteRenderInstance.start: " + mClientId);
-        if (mClientId == 0) {
+        setActive(true);
+        // NOTE: The current need is share the same buffer for all clients
+        // Therefore, just synchronize the default hardware buffer to client.
+//        if (mClientId == 0) {
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
@@ -92,16 +103,17 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
             }
 
             GlobalObject.runOnUiThread(r);
-        } else {
-            CocosHelper.runOnGameThread(() -> {
-                nativeOnCreateClient(mPlatformHandle, mClientId, mWidth, mHeight);
-            });
-        }
+//        } else {
+//            CocosHelper.runOnGameThread(() -> {
+//                nativeOnCreateClient(mPlatformHandle, mClientId, mWidth, mHeight);
+//            });
+//        }
     }
 
     @Override
     public void stop() throws RemoteException {
         Log.i(TAG, "CocosRemoteRenderInstance.stop: " + mClientId);
+        setActive(false);
         if (mClientId == -1) {
             return;
         }
@@ -143,6 +155,11 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
     @Override
     public void notifyRenderFrameFinish(int eglSyncFd) throws RemoteException {
         //TODO(cjh):
+    }
+
+    @Override
+    public void sendToScript(String arg0, String arg1) throws RemoteException {
+        JsbBridge.sendToScript(arg0, arg1);
     }
 
     private native void nativeOnCreateClient(long handle, int clientId, int width, int height);

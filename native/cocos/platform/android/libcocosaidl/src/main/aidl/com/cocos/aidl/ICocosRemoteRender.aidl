@@ -35,4 +35,5 @@ interface ICocosRemoteRender {
     boolean onTouchEvent(in MotionEvent event);
     void updateClientWindowSize(int width, int height);
     void notifyRenderFrameFinish(int eglSyncFd);
+    void sendToScript(in String arg0, in String arg1);
 }

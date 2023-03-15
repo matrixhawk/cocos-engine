@@ -15,8 +15,7 @@ import com.cocos.aidl.ICocosRemoteRenderCallback;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CocosRemoteRenderService extends Service {
-
+public class CocosRemoteRenderService extends Service implements JsbBridge.ICallback {
     private static final String TAG = "CocosRemoteRenderService";
     private static int mClientIdCounter = 0;
     private static CocosRemoteRenderService sInstance;
@@ -39,6 +38,8 @@ public class CocosRemoteRenderService extends Service {
         CocosHelper.init();
         CocosAudioFocusManager.registerAudioFocusListener(this);
         CanvasRenderingContext2DImpl.init(this);
+
+        JsbBridge.setCallback(this);
     }
 
     @Override
@@ -62,6 +63,8 @@ public class CocosRemoteRenderService extends Service {
         CocosAudioFocusManager.unregisterAudioFocusListener(this);
         CanvasRenderingContext2DImpl.destroy();
         GlobalObject.destroy();
+        JsbBridge.setCallback(null);
+
         super.onDestroy();
     }
 
@@ -97,9 +100,10 @@ public class CocosRemoteRenderService extends Service {
         synchronized (mRemoteRenderInstanceMap) {
             mRemoteRenderInstanceMap.put(clientId, instance);
         }
-        if (clientId == 0) {
+        // NOTE(cjh): ALl clients share the same hardware buffer now.
+//        if (clientId == 0) {
             instance.setHardwareBuffer(mDefaultHardwareBuffer);
-        }
+//        }
 
         return instance.asBinder();
     }
@@ -114,11 +118,15 @@ public class CocosRemoteRenderService extends Service {
                 instance.stop();
             } catch (RemoteException e) {
                 e.printStackTrace();
-            } finally {
+            }
+            // TODO(cjh): Whether need to remove the client from map?
+            // If client is re-connected, onBind will not be invoked, onRebind is called instead.
+            // Binder service will cache the instance internally, so we should not remove any clients.
+//            finally {
 //                synchronized (mRemoteRenderInstanceMap) {
 //                    mRemoteRenderInstanceMap.remove(instance.getClientId());
 //                }
-            }
+//            }
         }
         return true;
     }
@@ -142,9 +150,7 @@ public class CocosRemoteRenderService extends Service {
     }
 
     private void setHardwareBuffer(int clientId, HardwareBuffer buffer) {
-        if (clientId == 0) {
-            mDefaultHardwareBuffer = buffer;
-        }
+        Log.d(TAG, "setHardwareBuffer, clientId: " + clientId);
         CocosRemoteRenderInstance instance = getRenderInstance(clientId);
         if (instance == null) {
             Log.e(TAG, "setHardwareBuffer(" + clientId + "), could not find instance");
@@ -163,14 +169,32 @@ public class CocosRemoteRenderService extends Service {
     }
 
     public static void setHardwareBufferJNI(int clientId, Object buffer) {
-        sInstance.setHardwareBuffer(clientId, (HardwareBuffer) buffer);
+        sInstance.mDefaultHardwareBuffer = (HardwareBuffer)buffer;
+        // NOTE(cjh): The current need is share one buffer for all clients, so iterate the clients
+        for (Integer iClientId : sInstance.mRemoteRenderInstanceMap.keySet()) {
+            CocosRemoteRenderInstance instance = sInstance.getRenderInstance(iClientId);
+            sInstance.setHardwareBuffer(iClientId, (HardwareBuffer)buffer);;
+        }
     }
 
+    @Override
+    public void onScript(String arg0, String arg1) {
+        for (Integer clientId : mRemoteRenderInstanceMap.keySet()) {
+            CocosRemoteRenderInstance instance = getRenderInstance(clientId);
+            if (instance == null) {
+                continue;
+            }
+            try {
+                if (instance.isActive()) {
+                    instance.getCallback().onScript(arg0, arg1);
+                }
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+    }
     private native long nativeOnLaunchEngine(int width, int height, AssetManager manager);
     private native void nativeOnShutdownEngine(long handle);
     private native void nativeOnPauseEngine(long handle);
     private native void nativeOnResumeEngine(long handle);
-
-
-
 }

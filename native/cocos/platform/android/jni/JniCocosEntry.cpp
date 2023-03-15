@@ -118,6 +118,7 @@ JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnResum
 // JNI for CocosRemoteRenderInstance
 JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnCreateClient(JNIEnv *env, jobject service, jlong handle, jint clientId, jint width, jint height) {
     auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+
 }
 
 JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnDestroyClient(JNIEnv *env, jobject service, jlong handle, jint clientId) {
