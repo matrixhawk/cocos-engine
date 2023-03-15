@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class CocosRemoteRenderService extends Service implements JsbBridge.ICallback {
+    static {
+        System.loadLibrary("cocos");
+    }
     private static final String TAG = "CocosRemoteRenderService";
     private static int mClientIdCounter = 0;
     private static CocosRemoteRenderService sInstance;
@@ -48,17 +51,13 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
         int clientId = intent.getIntExtra("clientId", 0);
         int width = intent.getIntExtra("width", 1);
         int height = intent.getIntExtra("height", 1);
-        mPlatformHandle = nativeOnLaunchEngine(width, height, getAssets());
+        launchEngine(width, height, getAssets());
         return START_REDELIVER_INTENT;
     }
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy");
-        if (mPlatformHandle != 0L) {
-            nativeOnShutdownEngine(mPlatformHandle);
-            mPlatformHandle = 0L;
-        }
-
+        shutdownEngine();
         CocosHelper.unregisterBatteryLevelReceiver(this);
         CocosAudioFocusManager.unregisterAudioFocusListener(this);
         CanvasRenderingContext2DImpl.destroy();
@@ -95,6 +94,8 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
             Log.e(TAG, "onBind, intent is invalid, clientId: " + clientId + ", width=" + width + ", height=" + height);
             return null;
         }
+
+        launchEngine(width, height, getAssets());
 
         CocosRemoteRenderInstance instance = new CocosRemoteRenderInstance(mPlatformHandle, clientId, width, height);
         synchronized (mRemoteRenderInstanceMap) {
@@ -193,6 +194,20 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
             }
         }
     }
+
+    private void launchEngine(int width, int height, AssetManager manager) {
+        if (mPlatformHandle == 0L) {
+            mPlatformHandle = nativeOnLaunchEngine(width, height, manager);
+        }
+    }
+
+    private void shutdownEngine() {
+        if (mPlatformHandle != 0L) {
+            nativeOnShutdownEngine(mPlatformHandle);
+            mPlatformHandle = 0L;
+        }
+    }
+
     private native long nativeOnLaunchEngine(int width, int height, AssetManager manager);
     private native void nativeOnShutdownEngine(long handle);
     private native void nativeOnPauseEngine(long handle);

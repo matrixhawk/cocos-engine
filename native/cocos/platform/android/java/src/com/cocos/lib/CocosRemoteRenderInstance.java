@@ -64,8 +64,8 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
             return;
         }
 
-        if (!mIsBufferDirty) {
-            Log.w(TAG, ">>> clientId: " + mClientId + ", instance buffer is not dirty!");
+        if (!isBufferDirty()) {
+            Log.w(TAG, ">>> clientId: " + mClientId + ", instance buffer is not dirty, this=" + this);
             return;
         }
 
@@ -74,14 +74,15 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
         } catch(RemoteException e) {
             e.printStackTrace();
         } finally {
-            mIsBufferDirty = false;
+            setBufferDirty(false);
         }
     }
 
     @Override
     public void start() throws RemoteException {
-        Log.i(TAG, "CocosRemoteRenderInstance.start: " + mClientId);
+        Log.i(TAG, "CocosRemoteRenderInstance.start: " + mClientId + ", this=" + this);
         setActive(true);
+        setBufferDirty(true);
         // NOTE: The current need is share the same buffer for all clients
         // Therefore, just synchronize the default hardware buffer to client.
 //        if (mClientId == 0) {
@@ -112,12 +113,14 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
 
     @Override
     public void stop() throws RemoteException {
-        Log.i(TAG, "CocosRemoteRenderInstance.stop: " + mClientId);
+        Log.i(TAG, "CocosRemoteRenderInstance.stop: " + mClientId + ", this=" + this);
         setActive(false);
+        setBufferDirty(false);
+
         if (mClientId == -1) {
             return;
         }
-        mIsBufferDirty = true;
+
         final int clientId = mClientId;
         if (clientId > 0) {
             CocosHelper.runOnGameThread(() -> {
