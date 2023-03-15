@@ -27,7 +27,11 @@ package com.cocos.aidl;
 import com.cocos.aidl.ICocosRemoteRenderCallback;
 
 interface ICocosRemoteRender {
-    void initialize(int clientId, in ICocosRemoteRenderCallback cb);
+    void setCallback(in ICocosRemoteRenderCallback cb);
+    void start();
+    void stop();
+    void pause();
+    void resume();
     boolean onTouchEvent(in MotionEvent event);
     void updateClientWindowSize(int width, int height);
     void notifyRenderFrameFinish(int eglSyncFd);

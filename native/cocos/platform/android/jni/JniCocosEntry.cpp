@@ -83,7 +83,8 @@ JNIEXPORT void JNICALL Java_com_cocos_lib_CocosActivity_onCreateNative(JNIEnv *e
     cc::JniHelper::init(env, activity);
 }
 
-JNIEXPORT jlong JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnStartRender(JNIEnv *env, jobject service, jint clientId, jint width, jint height, jobject assetManager) {
+// JNI for CocosRemoteRenderService
+JNIEXPORT jlong JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnLaunchEngine(JNIEnv *env, jobject service, jint width, jint height, jobject assetManager) {
     // TODO(cjh): Handle clientId parameter
     CC_LOG_INFO("nativeOnStartRender ...");
     cc::JniHelper::init(env, service);
@@ -98,14 +99,40 @@ JNIEXPORT jlong JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnStar
     return reinterpret_cast<jlong>(platform);
 }
 
-JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnStopRender(JNIEnv *env, jobject service, jlong handle, jint clientId) {
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnShutdownEngine(JNIEnv *env, jobject service, jlong handle) {
     // TODO(cjh): Handle clientId parameter
-    CC_LOG_INFO("nativeOnStopRender ...");
+    CC_LOG_INFO("nativeOnShutdownEngine ...");
     auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
     androidPlatform->requestExitGameThreadAndWait();
 }
 
-JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnRenderSizeChanged(JNIEnv *env, jobject service, jlong handle, jint clientId, jint width, jint height) {
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnPauseEngine(JNIEnv *env, jobject service, jlong handle) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderService_nativeOnResumeEngine(JNIEnv *env, jobject service, jlong handle) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+}
+
+// JNI for CocosRemoteRenderInstance
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnCreateClient(JNIEnv *env, jobject service, jlong handle, jint clientId, jint width, jint height) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnDestroyClient(JNIEnv *env, jobject service, jlong handle, jint clientId) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnPauseClient(JNIEnv *env, jobject service, jlong handle, jint clientId) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnResumeClient(JNIEnv *env, jobject service, jlong handle, jint clientId) {
+    auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
+}
+
+JNIEXPORT void JNICALL Java_com_cocos_lib_CocosRemoteRenderInstance_nativeOnRenderSizeChanged(JNIEnv *env, jobject service, jlong handle, jint clientId, jint width, jint height) {
     // TODO(cjh): Handle clientId parameter
     auto *androidPlatform = reinterpret_cast<cc::AndroidPlatform *>(handle);
     // TODO(cjh):
