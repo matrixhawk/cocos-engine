@@ -59,6 +59,7 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
     public ICocosRemoteRenderCallback getCallback() { return mCallback; }
 
     public void updateHardwareBufferToClient() {
+        Log.d(TAG, "updateHardwareBufferToClient: mClientId=" + mClientId);
         if (mCallback == null) {
             Log.e(TAG, "The callback of render instance is null");
             return;
@@ -70,11 +71,12 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
         }
 
         try {
+            Log.i(TAG, ">> Notify client (" + mClientId + ") to update buffer");
             mCallback.onUpdateHardwareBuffer(mBuffer);
+            setBufferDirty(false);
         } catch(RemoteException e) {
             e.printStackTrace();
-        } finally {
-            setBufferDirty(false);
+            setBufferDirty(true);
         }
     }
 
@@ -96,12 +98,6 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
                     updateHardwareBufferToClient();
                 }
             };
-
-            if (mBuffer == null) {
-                Log.w(TAG, "Default hardware buffer is not set!");
-                GlobalObject.postDelay(r, 200);
-                return;
-            }
 
             GlobalObject.runOnUiThread(r);
 //        } else {

@@ -150,7 +150,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
         return instance;
     }
 
-    private void setHardwareBuffer(int clientId, HardwareBuffer buffer) {
+    private void setHardwareBuffer(final int clientId, final HardwareBuffer buffer) {
         Log.d(TAG, "setHardwareBuffer, clientId: " + clientId);
         CocosRemoteRenderInstance instance = getRenderInstance(clientId);
         if (instance == null) {
@@ -169,13 +169,17 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
         instance.updateHardwareBufferToClient();
     }
 
-    public static void setHardwareBufferJNI(int clientId, Object buffer) {
-        sInstance.mDefaultHardwareBuffer = (HardwareBuffer)buffer;
-        // NOTE(cjh): The current need is share one buffer for all clients, so iterate the clients
-        for (Integer iClientId : sInstance.mRemoteRenderInstanceMap.keySet()) {
-            CocosRemoteRenderInstance instance = sInstance.getRenderInstance(iClientId);
-            sInstance.setHardwareBuffer(iClientId, (HardwareBuffer)buffer);;
-        }
+    public static void setHardwareBufferJNI(int clientId, final Object buffer) {
+        GlobalObject.runOnUiThread(()->{
+            sInstance.mDefaultHardwareBuffer = (HardwareBuffer)buffer;
+            synchronized (sInstance.mRemoteRenderInstanceMap) {
+                // NOTE(cjh): The current need is share one buffer for all clients, so iterate the clients
+                for (Integer iClientId : sInstance.mRemoteRenderInstanceMap.keySet()) {
+                    CocosRemoteRenderInstance instance = sInstance.getRenderInstance(iClientId);
+                    sInstance.setHardwareBuffer(iClientId, (HardwareBuffer) buffer);
+                }
+            }
+        });
     }
 
     @Override
