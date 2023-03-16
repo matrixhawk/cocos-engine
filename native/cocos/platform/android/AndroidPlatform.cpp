@@ -80,7 +80,7 @@ namespace cc {
 #if CC_SURFACE_LESS_SERVICE
 
 AndroidPlatform::~AndroidPlatform() {
-    requestExitGameThreadAndWait();
+
 }
 
 int AndroidPlatform::init() {
@@ -114,6 +114,12 @@ int32_t AndroidPlatform::loop() {
         flushTasksOnGameThreadAtForegroundJNI();
         flushTasksOnGameThreadJNI();
     }
+
+    WindowEvent ev;
+    ev.type = WindowEvent::Type::CLOSE;
+    events::WindowEvent::broadcast(ev);
+    onDestroy();
+    _isDestroyRequested = false;
     return 0;
 }
 
