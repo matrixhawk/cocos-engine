@@ -7,31 +7,27 @@ import android.hardware.HardwareBuffer;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
-import android.view.MotionEvent;
-
-import com.cocos.aidl.ICocosRemoteRender;
-import com.cocos.aidl.ICocosRemoteRenderCallback;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class CocosRemoteRenderService extends Service implements JsbBridge.ICallback {
+public abstract class CocosRemoteRenderServiceBase extends Service implements JsbBridge.ICallback {
     static {
         System.loadLibrary("cocos");
     }
-    private static final String TAG = "CocosRemoteRenderService";
+    private static final String TAG = "CocosRemoteRenderServiceBase";
     private static int mClientIdCounter = 0;
-    private static CocosRemoteRenderService sInstance;
+    private static CocosRemoteRenderServiceBase sInstance;
     private final Map<Integer, CocosRemoteRenderInstance> mRemoteRenderInstanceMap = new HashMap<>();
     private long mPlatformHandle = 0L;
     private HardwareBuffer mDefaultHardwareBuffer;
-    public CocosRemoteRenderService() {
+    protected CocosRemoteRenderServiceBase() {
         sInstance = this;
     }
 
     @Override
     public void onCreate() {
-        Log.i(TAG, "onCreate");
+        Log.i(TAG, "onCreate: " + this);
         super.onCreate();
 
         // GlobalObject.init should be initialized at first.
@@ -47,7 +43,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "onStartCommand");
+        Log.i(TAG, "onStartCommand: " + this);
         int clientId = intent.getIntExtra("clientId", 0);
         int width = intent.getIntExtra("width", 1);
         int height = intent.getIntExtra("height", 1);
@@ -56,7 +52,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
     }
     @Override
     public void onDestroy() {
-        Log.i(TAG, "onDestroy");
+        Log.i(TAG, "onDestroy:" + this);
         shutdownEngine();
         CocosHelper.unregisterBatteryLevelReceiver(this);
         CocosAudioFocusManager.unregisterAudioFocusListener(this);
@@ -86,7 +82,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
     }
     @Override
     public IBinder onBind(Intent intent) {
-        Log.w(TAG, "onBind: " + intent);
+        Log.w(TAG, "onBind: " + intent + ", this=" + this);
         int clientId = intent.getIntExtra("clientId", -1);
         int width = intent.getIntExtra("width", -1);
         int height = intent.getIntExtra("height", -1);
@@ -113,6 +109,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
     public boolean onUnbind(Intent intent) {
         int clientId = intent.getIntExtra("clientId", -1);
         Log.w(TAG, "onUnbind: " + intent + ", clientId: " + clientId + ", map size: " + mRemoteRenderInstanceMap.size());
+        Log.d(TAG, "onUnbind, this=" + this);
         CocosRemoteRenderInstance instance = getRenderInstance(clientId);
         if (instance != null) {
             try {
@@ -135,7 +132,7 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
     @Override
     public void onRebind(Intent intent) {
         int clientId = intent.getIntExtra("clientId", -1);
-        Log.w(TAG, "onRebind: " + intent + ", clientId: " + clientId);
+        Log.w(TAG, "onRebind: " + intent + ", clientId: " + clientId + ",this=" + this);
         super.onRebind(intent);
     }
 
@@ -201,12 +198,14 @@ public class CocosRemoteRenderService extends Service implements JsbBridge.ICall
 
     private void launchEngine(int width, int height, AssetManager manager) {
         if (mPlatformHandle == 0L) {
+            Log.d(TAG, "launchEngine");
             mPlatformHandle = nativeOnLaunchEngine(width, height, manager);
         }
     }
 
     private void shutdownEngine() {
         if (mPlatformHandle != 0L) {
+            Log.d(TAG, "shutdownEngine");
             nativeOnShutdownEngine(mPlatformHandle);
             mPlatformHandle = 0L;
         }
