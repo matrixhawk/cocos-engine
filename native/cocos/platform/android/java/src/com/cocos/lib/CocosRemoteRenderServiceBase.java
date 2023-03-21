@@ -47,7 +47,7 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         int clientId = intent.getIntExtra("clientId", 0);
         int width = intent.getIntExtra("width", 1);
         int height = intent.getIntExtra("height", 1);
-        launchEngine(width, height, getAssets());
+        launchEngine(getWidth(), getHeight(), getAssets());
         return START_REDELIVER_INTENT;
     }
     @Override
@@ -86,14 +86,15 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         int clientId = intent.getIntExtra("clientId", -1);
         int width = intent.getIntExtra("width", -1);
         int height = intent.getIntExtra("height", -1);
-        if (clientId == -1 || width == -1 || height == -1) {
+        // NOTE(zxl): 目前宽高在service中设定，不检查client的宽高
+        if (clientId == -1 || mRemoteRenderInstanceMap.containsKey(clientId) /* || width == -1 || height == -1 */) {
             Log.e(TAG, "onBind, intent is invalid, clientId: " + clientId + ", width=" + width + ", height=" + height);
             return null;
         }
 
-        launchEngine(width, height, getAssets());
+        launchEngine(getWidth(), getHeight(), getAssets());
 
-        CocosRemoteRenderInstance instance = new CocosRemoteRenderInstance(mPlatformHandle, clientId, width, height);
+        CocosRemoteRenderInstance instance = new CocosRemoteRenderInstance(mPlatformHandle, clientId, getWidth(), getHeight());
         synchronized (mRemoteRenderInstanceMap) {
             mRemoteRenderInstanceMap.put(clientId, instance);
         }
@@ -215,4 +216,7 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
     private native void nativeOnShutdownEngine(long handle);
     private native void nativeOnPauseEngine(long handle);
     private native void nativeOnResumeEngine(long handle);
+
+    protected abstract int getWidth();
+    protected abstract int getHeight();
 }
