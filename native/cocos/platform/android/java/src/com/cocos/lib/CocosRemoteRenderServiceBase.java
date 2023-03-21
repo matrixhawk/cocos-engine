@@ -31,7 +31,7 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         super.onCreate();
 
         // GlobalObject.init should be initialized at first.
-        GlobalObject.init(this, null);
+        GlobalObject.init(this);
 
         CocosHelper.registerBatteryLevelReceiver(this);
         CocosHelper.init();

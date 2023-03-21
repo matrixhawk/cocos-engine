@@ -33,9 +33,13 @@ public class GlobalObject {
     private static Activity sActivity = null;
     private static Handler sHandler = null;
 
-    public static void init(Context context, Activity activity) {
-        sContext = context;
+    public static void init(Activity activity) {
         sActivity = activity;
+        init(activity.getApplicationContext());
+    }
+
+    public static void init(Context context) {
+        sContext = context.getApplicationContext();
         sHandler = new Handler(Looper.getMainLooper());
     }
 

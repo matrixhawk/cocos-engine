@@ -66,7 +66,7 @@ public class CocosActivity extends GameActivity {
         super.onCreate(savedInstanceState);
 
         // GlobalObject.init should be initialized at first.
-        GlobalObject.init(this, this);
+        GlobalObject.init(this);
 
         CocosHelper.registerBatteryLevelReceiver(this);
         CocosHelper.init();
