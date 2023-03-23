@@ -13,7 +13,7 @@ import com.cocos.lib.CocosRemoteRenderInstance.ClientNotifyListener;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class CocosRemoteRenderServiceBase extends Service implements JsbBridge.ICallback, ClientNotifyListener {
+public abstract class CocosRemoteRenderServiceBase extends Service implements ClientNotifyListener {
     static {
         System.loadLibrary("cocos");
     }
@@ -40,7 +40,6 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         CocosAudioFocusManager.registerAudioFocusListener(this);
         CanvasRenderingContext2DImpl.init(this);
 
-        JsbBridge.setCallback(this);
     }
 
     @Override
@@ -60,7 +59,6 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         CocosAudioFocusManager.unregisterAudioFocusListener(this);
         CanvasRenderingContext2DImpl.destroy();
         GlobalObject.destroy();
-        JsbBridge.setCallback(null);
 
         super.onDestroy();
     }
@@ -182,8 +180,7 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
         });
     }
 
-    @Override
-    public void onScript(String arg0, String arg1) {
+    public void notifyAllClient(String key, String value) {
         for (Integer clientId : mRemoteRenderInstanceMap.keySet()) {
             CocosRemoteRenderInstance instance = getRenderInstance(clientId);
             if (instance == null) {
@@ -191,11 +188,25 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
             }
             try {
                 if (instance.isActive()) {
-                    instance.getCallback().onScript(arg0, arg1);
+                    instance.getCallback().onScript(key, value);
                 }
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public void notifyClient(int clientId, String key, String value) {
+        CocosRemoteRenderInstance instance = getRenderInstance(clientId);
+        if (instance == null) {
+            return;
+        }
+        try {
+            if (instance.isActive()) {
+                instance.getCallback().onScript(key, value);
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
