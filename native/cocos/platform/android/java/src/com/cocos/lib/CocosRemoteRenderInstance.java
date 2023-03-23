@@ -19,12 +19,16 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
     private boolean mIsBufferDirty = true;
     private boolean mIsActive = false;
     private CocosTouchHandler mTouchHandler;
-
-    CocosRemoteRenderInstance(long platformHandle, int clientId, int width, int height) {
+    private ClientNotifyListener mNotifyListener;
+    protected interface ClientNotifyListener{
+        void onNotify(int clientId, String key, String value);
+    }
+    CocosRemoteRenderInstance(long platformHandle, int clientId, int width, int height, ClientNotifyListener listener) {
         mPlatformHandle = platformHandle;
         mClientId = clientId;
         mWidth = width;
         mHeight = height;
+        mNotifyListener = listener;
         // FIXME(cjh): Don't hardcode windowId to 1
         mTouchHandler = new CocosTouchHandler(1); // mainWindowId = 1
     }
@@ -158,7 +162,9 @@ class CocosRemoteRenderInstance extends ICocosRemoteRender.Stub {
 
     @Override
     public void sendToScript(String arg0, String arg1) throws RemoteException {
-        JsbBridge.sendToScript(arg0, arg1);
+        if(mNotifyListener!=null){
+            mNotifyListener.onNotify(mClientId, arg0, arg1);
+        }
     }
 
     private native void nativeOnCreateClient(long handle, int clientId, int width, int height);

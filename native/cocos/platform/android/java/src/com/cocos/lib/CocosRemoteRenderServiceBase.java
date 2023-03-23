@@ -8,10 +8,12 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
 
+import com.cocos.lib.CocosRemoteRenderInstance.ClientNotifyListener;
+
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class CocosRemoteRenderServiceBase extends Service implements JsbBridge.ICallback {
+public abstract class CocosRemoteRenderServiceBase extends Service implements JsbBridge.ICallback, ClientNotifyListener {
     static {
         System.loadLibrary("cocos");
     }
@@ -94,7 +96,7 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
 
         launchEngine(getWidth(), getHeight(), getAssets());
 
-        CocosRemoteRenderInstance instance = new CocosRemoteRenderInstance(mPlatformHandle, clientId, getWidth(), getHeight());
+        CocosRemoteRenderInstance instance = new CocosRemoteRenderInstance(mPlatformHandle, clientId, getWidth(), getHeight(),this);
         synchronized (mRemoteRenderInstanceMap) {
             mRemoteRenderInstanceMap.put(clientId, instance);
         }
@@ -217,6 +219,8 @@ public abstract class CocosRemoteRenderServiceBase extends Service implements Js
     private native void nativeOnPauseEngine(long handle);
     private native void nativeOnResumeEngine(long handle);
 
-    protected abstract int getWidth();
-    protected abstract int getHeight();
+    public abstract int getWidth();
+    public abstract int getHeight();
+
+    public abstract void onNotify(int clientId, String key, String value);
 }
