@@ -29,6 +29,7 @@
 
     #include "../MappingUtils.h"
     #include "../State.h"
+    #include "../BytecodeManager.h"
     #include "Class.h"
     #include "MissingSymbols.h"
     #include "Object.h"
@@ -145,7 +146,7 @@ bool jsbConsoleFormatLog(State &state, cc::LogLevel level, int msgIndex = 0) {
     int argc = static_cast<int>(args.size());
     if ((argc - msgIndex) == 1) {
         ccstd::string msg = args[msgIndex].toStringForce();
-        cc::Log::logMessage(cc::LogType::KERNEL, level 
+        cc::Log::logMessage(cc::LogType::KERNEL, level
             ,"JS: %s", msg.c_str());
     } else if (argc > 1) {
         ccstd::string msg = args[msgIndex].toStringForce();
@@ -505,11 +506,18 @@ ScriptEngine::ScriptEngine()
     }
     #endif
 
+    _bytecodeManager = BytecodeManager::create();
+
     ScriptEngine::instance = this;
 }
 
 ScriptEngine::~ScriptEngine() { // NOLINT(bugprone-exception-escape)
     cleanup();
+    if (_bytecodeManager != nullptr)
+    {
+        _bytecodeManager->release();
+        _bytecodeManager = nullptr;
+    }
     /**
      * v8::V8::Initialize() can only be called once for a process.
      * Engine::restart() will delete ScriptEngine and re-create it.
@@ -523,6 +531,15 @@ ScriptEngine::~ScriptEngine() { // NOLINT(bugprone-exception-escape)
 }
 
 bool ScriptEngine::postInit() {
+    const std::string& V8_CACHE_FILE_NAME = "v8Cache.cfg";
+    std::string writableDir = cc::FileUtils::getInstance()->getWritablePath();
+    if (!writableDir.empty() && writableDir[writableDir.length() - 1] != '/') {
+        writableDir.append("/");
+    }
+    const std::string v8CachedDataDir = writableDir + "v8-cache-dir/";
+    
+    _bytecodeManager->init(v8CachedDataDir, V8_CACHE_FILE_NAME, v8::V8::GetVersion(), _isAsyncWriteBytecode);
+
     v8::HandleScope hs(_isolate);
     // editor has it's own isolate,no need to enter and set callback.
     #if !CC_EDITOR
@@ -636,6 +653,12 @@ void ScriptEngine::cleanup() {
 
     SE_LOGD("ScriptEngine::cleanup begin ...\n");
     _isInCleanup = true;
+
+    if (_bytecodeManager != nullptr) {
+        _bytecodeManager->destroy();
+        _bytecodeManager->release();
+        _bytecodeManager = nullptr;
+    }
 
     cc::events::ScriptEngine::broadcast(cc::ScriptEngineEvent::BEFORE_CLEANUP);
 
@@ -837,13 +860,18 @@ bool ScriptEngine::evalString(const char *script, uint32_t length /* = 0 */, Val
         return false;
     }
 
+    auto prevTime = std::chrono::steady_clock::now();
+
     CC_ASSERT_NOT_NULL(script);
     if (length == 0) {
         length = static_cast<uint32_t>(strlen(script));
     }
 
+    std::string fullPath;
     if (fileName == nullptr) {
         fileName = "(no filename)";
+    } else {
+        fullPath = _fileOperationDelegate.onGetFullPath(fileName);
     }
 
     // Fix the source url is too long displayed in Chrome debugger.
@@ -869,7 +897,74 @@ bool ScriptEngine::evalString(const char *script, uint32_t length /* = 0 */, Val
     }
 
     v8::ScriptOrigin origin(_isolate, originStr.ToLocalChecked());
-    v8::MaybeLocal<v8::Script> maybeScript = v8::Script::Compile(_context.Get(_isolate), source.ToLocalChecked(), &origin);
+    v8::MaybeLocal<v8::Script> maybeScript;
+
+    BytecodeManager::V8CachedData* v8CachedData = nullptr;
+
+    std::string pathMD5;
+    std::string scriptContentMD5;
+    if (!fullPath.empty() && _bytecodeManager != nullptr)
+    {
+        v8CachedData = _bytecodeManager->readCachedData(fullPath, script, (size_t)length, &pathMD5, &scriptContentMD5);
+    }
+
+    auto compileScriptSource = [&](){
+        v8::ScriptCompiler::Source compilerSource(source.ToLocalChecked(), origin);
+        maybeScript = v8::ScriptCompiler::Compile(_context.Get(_isolate), &compilerSource, v8::ScriptCompiler::kNoCompileOptions);
+
+        if (!pathMD5.empty() && !maybeScript.IsEmpty())
+        {
+            CC_LOG_INFO("[v8] Could not find v8 cache for (%s), try to create it!\n", fileName);
+            v8::ScriptCompiler::CachedData* c = v8::ScriptCompiler::CreateCodeCache(maybeScript.ToLocalChecked()->GetUnboundScript());
+            if (c != nullptr && _bytecodeManager != nullptr)
+            {
+                std::chrono::steady_clock::time_point oldTime = std::chrono::steady_clock::now();
+
+                if (_isAsyncWriteBytecode)
+                {
+                    _bytecodeManager->saveCachedDataAsync(pathMD5, scriptContentMD5, c->data, (size_t)c->length, script, (size_t)length, [sourceUrl, oldTime](bool saveCachedDataSucceed){
+                        long long milliSec = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - oldTime).count();
+                        const char* saveCachedDataRet = saveCachedDataSucceed ? "succeed" : "failed";
+                        CC_LOG_WARNING("[v8] saveCachedDataAsync(%s) %s, wastes: %lldms", sourceUrl.c_str(), saveCachedDataRet, milliSec);
+                    });
+                }
+                else
+                {
+                    bool saveCachedDataSucceed = _bytecodeManager->saveCachedData(pathMD5, scriptContentMD5, c->data, (size_t)c->length, script, (size_t)length);
+                    long long milliSec = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - oldTime).count();
+                    const char* saveCachedDataRet = saveCachedDataSucceed ? "succeed" : "failed";
+                    CC_LOG_WARNING("[v8] saveCachedData(%s) %s, wastes: %lldms", sourceUrl.c_str(), saveCachedDataRet, milliSec);
+                }
+#if _WIN32
+                v8::ScriptCompiler::DestroyCodeCache(&c);
+#else
+                // BytecodeManager::saveCachedData will copy binary, so it's safe to delete c here.
+                delete c;
+#endif
+            }
+        }
+    };
+
+    if (v8CachedData == nullptr)
+    {
+        compileScriptSource();
+    }
+    else
+    {
+        CC_LOG_INFO("[v8] Found cache data for (%s)\n", fileName);
+        // DON'T delete 'cache' variable, it will be deleted by v8::ScriptCompiler::Source::~Source,
+        // therefore don't use ccnew here.
+        v8::ScriptCompiler::CachedData* cache = new v8::ScriptCompiler::CachedData((const uint8_t*)v8CachedData->getData(), v8CachedData->getLength());
+        v8::ScriptCompiler::Source compilerSource(source.ToLocalChecked(), origin, cache);
+        maybeScript = v8::ScriptCompiler::Compile(_context.Get(_isolate), &compilerSource, v8::ScriptCompiler::kConsumeCodeCache);
+        _bytecodeManager->releaseCachedData(&v8CachedData);
+
+        if (maybeScript.IsEmpty())
+        {
+            CC_LOG_WARNING("[v8] Consume code cache failed, fallback to compile source code");
+            compileScriptSource();
+        }
+    }
 
     bool success = false;
 
@@ -899,6 +994,22 @@ bool ScriptEngine::evalString(const char *script, uint32_t length /* = 0 */, Val
     if (!success) {
         SE_LOGE("ScriptEngine::evalString script %s, failed!\n", fileName);
     }
+
+    auto now = std::chrono::steady_clock::now();
+
+    double ms = (double)std::chrono::duration_cast<std::chrono::microseconds>(now - prevTime).count() / 1000.0;
+
+    CC_LOG_INFO("evalString, %s, cost: %lf ms", fileName, ms);
+
+    // assets/main/index.js is the last loaded script, so it's safe to release the memory of BytecodeManager here.
+    if (0 == strcmp(fileName, "assets/main/index.js")) {
+        if (_bytecodeManager != nullptr) {
+            _bytecodeManager->destroy();
+            _bytecodeManager->release();
+            _bytecodeManager = nullptr;
+        }
+    }
+
     return success;
 }
 

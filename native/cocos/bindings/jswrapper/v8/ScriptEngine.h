@@ -31,7 +31,6 @@
 
     #include "../Value.h"
     #include "Base.h"
-
     #include <thread>
 
     #if SE_ENABLE_INSPECTOR
@@ -50,6 +49,7 @@ namespace se {
 class Object;
 class Class;
 class Value;
+class BytecodeManager;
 
 /**
  * A stack-allocated class that governs a number of local handles.
@@ -390,6 +390,9 @@ private:
     ccstd::vector<std::tuple<std::unique_ptr<v8::Persistent<v8::Promise>>, ccstd::vector<PromiseExceptionMsg>>> _promiseArray;
 
     std::chrono::steady_clock::time_point _startTime;
+
+    BytecodeManager* _bytecodeManager = nullptr;
+
     ccstd::vector<RegisterCallback> _registerCallbackArray;
     ccstd::vector<RegisterCallback> _permRegisterCallbackArray;
     ccstd::vector<std::function<void()>> _beforeInitHookArray;
@@ -427,6 +430,7 @@ private:
     bool _isGarbageCollecting;
     bool _isInCleanup;
     bool _isErrorHandleWorking;
+    bool _isAsyncWriteBytecode{true};
 };
 
 } // namespace se

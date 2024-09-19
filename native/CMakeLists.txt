@@ -480,6 +480,8 @@ cocos_source_files(
     cocos/base/std/hash/extensions.hpp
     cocos/base/std/hash/hash_fwd.hpp
     cocos/base/std/hash/hash.h
+    cocos/base/md5.c
+    cocos/base/md5.h
 )
 
 ############ application
@@ -2683,6 +2685,8 @@ cocos_source_files(MODULE ccbindings
                  cocos/bindings/jswrapper/Value.h
                  cocos/bindings/jswrapper/ValueArrayPool.cpp
                  cocos/bindings/jswrapper/ValueArrayPool.h
+                 cocos/bindings/jswrapper/BytecodeManager.cpp
+                 cocos/bindings/jswrapper/BytecodeManager.h
 )
 
 cocos_source_files(
