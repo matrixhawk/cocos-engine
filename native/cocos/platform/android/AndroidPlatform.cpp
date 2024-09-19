@@ -48,6 +48,15 @@
 #include "engine/EngineEvents.h"
 #include "paddleboat.h"
 
+#include <pthread.h>
+#include <sched.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/syscall.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#include <dirent.h>
+
 #define ABORT_GAME                          \
     {                                       \
         CC_LOG_ERROR("*** GAME ABORTING."); \
@@ -804,7 +813,49 @@ int AndroidPlatform::getSdkVersion() const {
     return AConfiguration_getSdkVersion(_app->config);
 }
 
+void set_cpu_affinity(pid_t tid) {
+    struct sched_param sd;
+    cpu_set_t mask;
+    sd.sched_priority = sched_get_priority_max(SCHED_RR);
+    sched_setscheduler(tid, SCHED_RR, &sd);
+    CPU_ZERO(&mask);
+    CPU_SET(4, &mask);
+    CPU_SET(5, &mask);
+    CPU_SET(6, &mask);
+    CPU_SET(7, &mask);
+    if (sched_setaffinity(tid, sizeof(mask), &mask) == -1) {
+        CC_LOG_ERROR("sched_setaffinity failed");
+    }
+}
+
+void set_process_cpu_affinity(pid_t pid) {
+    char task_dir[256];
+    sprintf(task_dir, "/proc/%d/task", pid);
+
+    DIR *dir = opendir(task_dir);
+    if (!dir) {
+        CC_LOG_ERROR("opendir filed");
+        set_cpu_affinity(gettid());
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir))) {
+        // 确保我们没有获取到 . 或 .. 目录
+        if (strcmp(entry->d_name, ".") && strcmp(entry->d_name, "..")) {
+            pid_t tid = atoi(entry->d_name);
+            set_cpu_affinity(tid);
+        }
+    }
+
+    closedir(dir);
+}
+
 int32_t AndroidPlatform::run(int /*argc*/, const char ** /*argv*/) {
+    // set_process_cpu_affinity(getpid());
+    // if (setpriority(PRIO_PROCESS, getpid(), -20) == -1) {
+    //     CC_LOG_ERROR("setpriority failed");
+    // }
     loop();
     return 0;
 }
